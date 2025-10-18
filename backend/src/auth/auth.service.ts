@@ -86,7 +86,7 @@ export class AuthService {
     // Set session first
     await supabase.auth.setSession({
       access_token: accessToken,
-      refresh_token: '', // You may need to store refresh token
+      refresh_token: "", // You may need to store refresh token
     });
 
     const { error } = await supabase.auth.updateUser({ password });
@@ -150,5 +150,9 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  getSupabaseAdmin() {
+    return this.supabaseService.getAdminClient();
   }
 }

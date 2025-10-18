@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { alertsApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import ChangePasswordForm from '@/components/ChangePasswordForm';
+import toast from 'react-hot-toast';
 
 interface PriceAlert {
   id: string;
@@ -59,11 +60,22 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAlert = async (alertId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa cảnh báo này?')) return;
-
     try {
-      await alertsApi.deleteAlert(alertId);
-      setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+      const deletePromise = (async () => {
+        await alertsApi.deleteAlert(alertId);
+        setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+      })();
+
+      toast.promise(
+        deletePromise,
+        {
+          loading: 'Đang xóa cảnh báo...',
+          success: 'Đã xóa cảnh báo',
+          error: 'Không thể xóa cảnh báo',
+        }
+      );
+
+      await deletePromise;
     } catch (error) {
       console.error('Error deleting alert:', error);
     }

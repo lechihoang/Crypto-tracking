@@ -3,6 +3,7 @@ export interface CryptoCurrency {
   name: string;
   symbol: string;
   slug: string;
+  image?: string;
   cmc_rank: number;
   num_market_pairs: number;
   circulating_supply: number;
@@ -18,6 +19,9 @@ export interface CryptoCurrency {
     slug?: string;
     token_address?: string;
   } | null;
+  sparkline_in_7d?: {
+    price: number[];
+  };
   quote: {
     USD: {
       price: number;
@@ -95,6 +99,7 @@ export interface CoinInfo {
   self_reported_circulating_supply: number;
   self_reported_tags: string[] | null;
   self_reported_market_cap: number;
+  num_market_pairs?: number;
 }
 
 export interface CoinInfoResponse {

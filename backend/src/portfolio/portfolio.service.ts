@@ -5,7 +5,11 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { PortfolioHolding, PortfolioSnapshot } from "../entities";
+import {
+  PortfolioHolding,
+  PortfolioSnapshot,
+  PortfolioBenchmark,
+} from "../entities";
 import { CryptoService } from "../crypto/crypto.service";
 import { CreateHoldingDto } from "./dto/create-holding.dto";
 import { UpdateHoldingDto } from "./dto/update-holding.dto";
@@ -17,6 +21,8 @@ export class PortfolioService {
     private holdingRepository: Repository<PortfolioHolding>,
     @InjectRepository(PortfolioSnapshot)
     private snapshotRepository: Repository<PortfolioSnapshot>,
+    @InjectRepository(PortfolioBenchmark)
+    private benchmarkRepository: Repository<PortfolioBenchmark>,
     private cryptoService: CryptoService,
   ) {}
 
@@ -157,7 +163,7 @@ export class PortfolioService {
 
   async getPortfolioValueHistory(userId: string, days: number = 30) {
     const holdings = await this.holdingRepository.find({
-      where: { userId }
+      where: { userId },
     });
 
     if (holdings.length === 0) {
@@ -166,7 +172,7 @@ export class PortfolioService {
 
     try {
       // Get historical prices for all coins in portfolio
-      const coinIds = holdings.map(h => h.coinId);
+      const coinIds = holdings.map((h) => h.coinId);
       const uniqueCoinIds = [...new Set(coinIds)];
 
       // Fetch price history for all coins with delays to respect rate limits
@@ -174,7 +180,10 @@ export class PortfolioService {
 
       for (const coinId of uniqueCoinIds) {
         try {
-          const response = await this.cryptoService.getCoinPriceHistory(coinId, days);
+          const response = await this.cryptoService.getCoinPriceHistory(
+            coinId,
+            days,
+          );
           priceHistories.push({ coinId, prices: response.prices });
         } catch (error) {
           console.error(`Failed to fetch price history for ${coinId}:`, error);
@@ -183,7 +192,7 @@ export class PortfolioService {
 
         // Add small delay between requests to avoid overwhelming the API
         if (uniqueCoinIds.indexOf(coinId) < uniqueCoinIds.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 
@@ -208,10 +217,10 @@ export class PortfolioService {
       const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
 
       // Calculate portfolio value at each timestamp
-      const portfolioHistory = sortedTimestamps.map(timestamp => {
+      const portfolioHistory = sortedTimestamps.map((timestamp) => {
         let totalValue = 0;
 
-        holdings.forEach(holding => {
+        holdings.forEach((holding) => {
           const coinPriceMap = priceMap.get(holding.coinId);
           if (coinPriceMap) {
             // Find the closest price to this timestamp
@@ -239,8 +248,39 @@ export class PortfolioService {
 
       return { data: portfolioHistory };
     } catch (error) {
-      console.error('Error calculating portfolio value history:', error);
+      console.error("Error calculating portfolio value history:", error);
       return { data: [] };
     }
+  }
+
+  async setBenchmark(userId: string, benchmarkValue: number): Promise<PortfolioBenchmark> {
+    // Check if benchmark already exists
+    let benchmark = await this.benchmarkRepository.findOne({
+      where: { userId },
+    });
+
+    if (benchmark) {
+      // Update existing benchmark
+      benchmark.benchmarkValue = benchmarkValue;
+      benchmark.updatedAt = new Date();
+    } else {
+      // Create new benchmark
+      benchmark = this.benchmarkRepository.create({
+        userId,
+        benchmarkValue,
+      });
+    }
+
+    return this.benchmarkRepository.save(benchmark);
+  }
+
+  async getBenchmark(userId: string): Promise<PortfolioBenchmark | null> {
+    return this.benchmarkRepository.findOne({
+      where: { userId },
+    });
+  }
+
+  async deleteBenchmark(userId: string): Promise<void> {
+    await this.benchmarkRepository.delete({ userId });
   }
 }

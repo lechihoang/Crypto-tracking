@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { BarChart3, User, LogOut, Menu, X, Settings, Wallet, Bell } from 'lucide-react';
 
 export default function Header() {
   const { user, signOut } = useAuth();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -30,27 +32,37 @@ export default function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-2">
             <Link
               href="/compare"
-              className="text-gray-600 hover:text-blue-600 px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-gray-100"
+              className="relative px-4 py-2 font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
             >
               So sánh
+              <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 transition-transform duration-300 origin-center ${pathname === '/compare' ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}></span>
+            </Link>
+            <Link
+              href="/blog"
+              className="relative px-4 py-2 font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
+            >
+              Tin tức
+              <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 transition-transform duration-300 origin-center ${pathname === '/blog' ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}></span>
             </Link>
 
             {user && (
               <>
                 <Link
                   href="/dashboard"
-                  className="text-gray-600 hover:text-blue-600 px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-gray-100"
+                  className="relative px-4 py-2 font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
                 >
                   Dashboard
+                  <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 transition-transform duration-300 origin-center ${pathname === '/dashboard' ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}></span>
                 </Link>
                 <Link
                   href="/portfolio"
-                  className="text-gray-600 hover:text-blue-600 px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-gray-100"
+                  className="relative px-4 py-2 font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
                 >
                   Danh mục
+                  <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 transition-transform duration-300 origin-center ${pathname === '/portfolio' ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}></span>
                 </Link>
               </>
             )}
@@ -168,6 +180,13 @@ export default function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 So sánh
+              </Link>
+              <Link
+                href="/blog"
+                className="block px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Tin tức
               </Link>
 
               {user ? (

@@ -27,6 +27,9 @@ export class PortfolioHolding {
   @Column({ name: "coin_name", type: "varchar", length: 100 })
   coinName: string;
 
+  @Column({ name: "coin_image", type: "text", nullable: true })
+  coinImage?: string;
+
   @Column({ type: "decimal", precision: 20, scale: 8 })
   quantity: number;
 

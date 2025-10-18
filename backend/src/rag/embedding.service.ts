@@ -1,15 +1,17 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import axios from "axios";
 
 @Injectable()
 export class EmbeddingService {
   private readonly huggingFaceApiKey: string;
-  private readonly huggingFaceBaseUrl = 'https://api-inference.huggingface.co';
-  private readonly modelName = 'sentence-transformers/all-MiniLM-L6-v2';
+  private readonly huggingFaceBaseUrl = "https://api-inference.huggingface.co";
+  private readonly modelName = "BAAI/bge-small-en-v1.5";
+  private readonly embeddingDimension = 384; // bge-small-en-v1.5 dimensions
 
   constructor(private configService: ConfigService) {
-    this.huggingFaceApiKey = this.configService.get<string>('HUGGINGFACE_API_KEY');
+    this.huggingFaceApiKey =
+      this.configService.get<string>("HUGGINGFACE_API_KEY") || "";
   }
 
   async createEmbedding(text: string): Promise<number[]> {
@@ -18,72 +20,73 @@ export class EmbeddingService {
       const cleanText = this.cleanText(text);
 
       const response = await axios.post(
-        `${this.huggingFaceBaseUrl}/pipeline/feature-extraction/${this.modelName}`,
+        `${this.huggingFaceBaseUrl}/models/${this.modelName}`,
         {
-          inputs: cleanText,
+          inputs: cleanText, // Single text string
           options: {
             wait_for_model: true,
-            use_cache: true
-          }
+            use_cache: true,
+          },
         },
         {
           headers: {
-            'Authorization': `Bearer ${this.huggingFaceApiKey}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.huggingFaceApiKey}`,
+            "Content-Type": "application/json",
           },
           timeout: 30000, // 30 second timeout
-        }
+        },
       );
 
-      // HuggingFace returns nested array, we need the first embedding
+      // HuggingFace returns embedding as nested array
       const embedding = response.data;
 
-      if (!Array.isArray(embedding) || embedding.length === 0) {
-        throw new Error('Invalid embedding response from HuggingFace');
+      if (!Array.isArray(embedding)) {
+        throw new Error("Invalid embedding response from HuggingFace");
       }
 
-      // Handle different response formats
+      // BGE model returns format: [[embedding_vector]]
       let finalEmbedding: number[];
       if (Array.isArray(embedding[0])) {
-        finalEmbedding = embedding[0]; // Take first embedding if batch
+        finalEmbedding = embedding[0];
       } else {
-        finalEmbedding = embedding; // Direct embedding array
+        finalEmbedding = embedding;
       }
 
-      // Validate embedding dimensions (should be 384 for all-MiniLM-L6-v2)
-      if (finalEmbedding.length !== 384) {
-        throw new Error(`Expected 384 dimensions, got ${finalEmbedding.length}`);
+      // Validate embedding dimensions
+      if (!finalEmbedding || finalEmbedding.length !== this.embeddingDimension) {
+        throw new Error(
+          `Expected ${this.embeddingDimension} dimensions, got ${finalEmbedding?.length || 0}`,
+        );
       }
 
       return finalEmbedding;
-
     } catch (error) {
-      console.error('Embedding service error:', error);
+      console.error("Embedding service error:", error);
 
       if (error.response?.status === 401) {
         throw new HttpException(
-          'HuggingFace API authentication failed. Please check your API key.',
-          HttpStatus.UNAUTHORIZED
+          "HuggingFace API authentication failed. Please check your API key.",
+          HttpStatus.UNAUTHORIZED,
         );
       }
 
       if (error.response?.status === 429) {
         throw new HttpException(
-          'HuggingFace API rate limit exceeded. Please try again later.',
-          HttpStatus.TOO_MANY_REQUESTS
+          "HuggingFace API rate limit exceeded. Please try again later.",
+          HttpStatus.TOO_MANY_REQUESTS,
         );
       }
 
       if (error.response?.status === 503) {
         throw new HttpException(
-          'HuggingFace model is loading. Please wait and try again.',
-          HttpStatus.SERVICE_UNAVAILABLE
+          "HuggingFace model is loading. Please wait and try again.",
+          HttpStatus.SERVICE_UNAVAILABLE,
         );
       }
 
       throw new HttpException(
-        'Failed to create embedding. Please try again.',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        "Failed to create embedding. Please try again.",
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -96,20 +99,19 @@ export class EmbeddingService {
 
       for (let i = 0; i < texts.length; i += batchSize) {
         const batch = texts.slice(i, i + batchSize);
-        const batchPromises = batch.map(text => this.createEmbedding(text));
+        const batchPromises = batch.map((text) => this.createEmbedding(text));
         const batchResults = await Promise.all(batchPromises);
         results.push(...batchResults);
 
         // Small delay between batches to respect rate limits
         if (i + batchSize < texts.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
 
       return results;
-
     } catch (error) {
-      console.error('Batch embedding error:', error);
+      console.error("Batch embedding error:", error);
       throw error;
     }
   }
@@ -117,9 +119,8 @@ export class EmbeddingService {
   private cleanText(text: string): string {
     return text
       .trim()
-      .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
-      .replace(/[^\w\s\-\.,!?;:()\[\]{}'"]/g, '') // Remove special characters except common punctuation
+      .replace(/\s+/g, " ") // Replace multiple whitespace with single space
+      .replace(/[^\w\s\-\.,!?;:()\[\]{}'"]/g, "") // Remove special characters except common punctuation
       .substring(0, 500); // Truncate to 500 chars to stay within limits
   }
-
 }

@@ -8,7 +8,13 @@ import { AlertsModule } from "./alerts/alerts.module";
 import { PortfolioModule } from "./portfolio/portfolio.module";
 import { ChatbotModule } from "./chatbot/chatbot.module";
 import { RagModule } from "./rag/rag.module";
-import { PriceAlert, PortfolioHolding, PortfolioSnapshot } from "./entities";
+import {
+  PriceAlert,
+  PortfolioHolding,
+  PortfolioSnapshot,
+  ChatMessage,
+  PortfolioBenchmark,
+} from "./entities";
 
 @Module({
   imports: [
@@ -18,7 +24,13 @@ import { PriceAlert, PortfolioHolding, PortfolioSnapshot } from "./entities";
     TypeOrmModule.forRoot({
       type: "postgres",
       url: process.env.DATABASE_URL,
-      entities: [PriceAlert, PortfolioHolding, PortfolioSnapshot],
+      entities: [
+        PriceAlert,
+        PortfolioHolding,
+        PortfolioSnapshot,
+        ChatMessage,
+        PortfolioBenchmark,
+      ],
       synchronize: true, // Auto-create tables in development
       ssl: { rejectUnauthorized: false },
       logging: false,

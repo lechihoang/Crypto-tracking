@@ -1,9 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Pinecone } from "@pinecone-database/pinecone";
 
 export interface VectorDocument {
-  id: string;
   content: string;
   title: string;
   url: string;
@@ -12,16 +11,17 @@ export interface VectorDocument {
 }
 
 export interface SearchResult extends VectorDocument {
+  id: string;
   score: number;
 }
 
 @Injectable()
 export class VectorService {
   private pinecone: Pinecone;
-  private indexName = 'crypto-knowledge';
+  private indexName = "crypto-knowledge";
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('PINECONE_API_KEY');
+    const apiKey = this.configService.get<string>("PINECONE_API_KEY");
 
     if (apiKey) {
       this.pinecone = new Pinecone({
@@ -33,47 +33,48 @@ export class VectorService {
   async initializeIndex(): Promise<void> {
     try {
       if (!this.pinecone) {
-        console.log('Pinecone not initialized - API key missing');
+        console.log("Pinecone not initialized - API key missing");
         return;
       }
 
       // Check if index exists
       const existingIndexes = await this.pinecone.listIndexes();
       const indexExists = existingIndexes.indexes?.some(
-        index => index.name === this.indexName
+        (index) => index.name === this.indexName,
       );
 
       if (!indexExists) {
-        console.log('Creating Pinecone index...');
+        console.log("Creating Pinecone index...");
 
         await this.pinecone.createIndex({
           name: this.indexName,
           dimension: 384, // all-MiniLM-L6-v2 dimensions
-          metric: 'cosine',
+          metric: "cosine",
           spec: {
             serverless: {
-              cloud: 'aws',
-              region: 'us-east-1'
-            }
-          }
+              cloud: "aws",
+              region: "us-east-1",
+            },
+          },
         });
 
-        console.log('Pinecone index created successfully');
+        console.log("Pinecone index created successfully");
       }
-
     } catch (error) {
-      console.error('Error initializing Pinecone index:', error);
+      console.error("Error initializing Pinecone index:", error);
     }
   }
 
-  async upsertDocuments(documents: Array<{
-    id: string;
-    embedding: number[];
-    metadata: VectorDocument;
-  }>): Promise<void> {
+  async upsertDocuments(
+    documents: Array<{
+      id: string;
+      embedding: number[];
+      metadata: VectorDocument;
+    }>,
+  ): Promise<void> {
     try {
       if (!this.pinecone) {
-        throw new Error('Pinecone not initialized');
+        throw new Error("Pinecone not initialized");
       }
 
       const index = this.pinecone.index(this.indexName);
@@ -83,7 +84,7 @@ export class VectorService {
       for (let i = 0; i < documents.length; i += batchSize) {
         const batch = documents.slice(i, i + batchSize);
 
-        const vectors = batch.map(doc => ({
+        const vectors = batch.map((doc) => ({
           id: doc.id,
           values: doc.embedding,
           metadata: {
@@ -91,16 +92,17 @@ export class VectorService {
             title: doc.metadata.title,
             url: doc.metadata.url,
             source: doc.metadata.source,
-            publishedAt: doc.metadata.publishedAt?.toISOString() || new Date().toISOString()
-          }
+            publishedAt:
+              doc.metadata.publishedAt?.toISOString() ||
+              new Date().toISOString(),
+          },
         }));
 
         await index.upsert(vectors);
         console.log(`Upserted batch ${Math.floor(i / batchSize) + 1}`);
       }
-
     } catch (error) {
-      console.error('Error upserting documents to Pinecone:', error);
+      console.error("Error upserting documents to Pinecone:", error);
       throw error;
     }
   }
@@ -108,11 +110,11 @@ export class VectorService {
   async searchSimilar(
     queryEmbedding: number[],
     topK: number = 5,
-    filter?: Record<string, any>
+    filter?: Record<string, any>,
   ): Promise<SearchResult[]> {
     try {
       if (!this.pinecone) {
-        console.log('Pinecone not initialized, returning empty results');
+        console.log("Pinecone not initialized, returning empty results");
         return [];
       }
 
@@ -122,7 +124,7 @@ export class VectorService {
         vector: queryEmbedding,
         topK: topK,
         includeMetadata: true,
-        filter: filter
+        filter: filter,
       });
 
       const results: SearchResult[] = [];
@@ -137,16 +139,15 @@ export class VectorService {
               url: match.metadata.url as string,
               source: match.metadata.source as string,
               publishedAt: new Date(match.metadata.publishedAt as string),
-              score: match.score || 0
+              score: match.score || 0,
             });
           }
         }
       }
 
       return results;
-
     } catch (error) {
-      console.error('Error searching Pinecone:', error);
+      console.error("Error searching Pinecone:", error);
       return [];
     }
   }
@@ -161,18 +162,15 @@ export class VectorService {
       const index = this.pinecone.index(this.indexName);
 
       // Delete documents older than cutoff date
-      // Keep educational content (no publishedAt filter for them)
       await index.deleteMany({
         filter: {
           publishedAt: { $lt: cutoffDate.toISOString() },
-          source: { $ne: 'Educational' }
-        }
+        },
       });
 
       console.log(`Cleaned up documents older than ${daysOld} days`);
-
     } catch (error) {
-      console.error('Error cleaning up old documents:', error);
+      console.error("Error cleaning up old documents:", error);
     }
   }
 
@@ -184,15 +182,56 @@ export class VectorService {
       const stats = await index.describeIndexStats();
 
       return {
-        totalVectorCount: stats.totalVectorCount,
+        totalVectorCount: stats.totalRecordCount || 0,
         dimension: stats.dimension,
         indexFullness: stats.indexFullness,
-        namespaces: stats.namespaces
+        namespaces: stats.namespaces,
       };
-
     } catch (error) {
-      console.error('Error getting index stats:', error);
+      console.error("Error getting index stats:", error);
       return null;
+    }
+  }
+
+  async deleteIndex(): Promise<void> {
+    try {
+      if (!this.pinecone) {
+        console.log("Pinecone not initialized - API key missing");
+        return;
+      }
+
+      const existingIndexes = await this.pinecone.listIndexes();
+      const indexExists = existingIndexes.indexes?.some(
+        (index) => index.name === this.indexName,
+      );
+
+      if (indexExists) {
+        console.log(`Deleting Pinecone index: ${this.indexName}...`);
+        await this.pinecone.deleteIndex(this.indexName);
+        console.log("Pinecone index deleted successfully");
+      } else {
+        console.log("Index does not exist");
+      }
+    } catch (error) {
+      console.error("Error deleting Pinecone index:", error);
+      throw error;
+    }
+  }
+
+  async deleteAllVectors(): Promise<void> {
+    try {
+      if (!this.pinecone) {
+        console.log("Pinecone not initialized - API key missing");
+        return;
+      }
+
+      const index = this.pinecone.index(this.indexName);
+      console.log(`Deleting all vectors from index: ${this.indexName}...`);
+      await index.deleteAll();
+      console.log("All vectors deleted successfully");
+    } catch (error) {
+      console.error("Error deleting all vectors:", error);
+      throw error;
     }
   }
 }

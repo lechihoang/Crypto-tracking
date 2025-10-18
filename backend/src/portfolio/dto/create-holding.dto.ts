@@ -19,6 +19,10 @@ export class CreateHoldingDto {
   @MinLength(1, { message: "Coin name is required" })
   coinName: string;
 
+  @IsOptional()
+  @IsString()
+  coinImage?: string;
+
   @IsNumber()
   @Min(0.00000001, { message: "Quantity must be greater than 0" })
   quantity: number;

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader } from 'lucide-react';
 import { portfolioApi } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface HoldingWithValue {
   id: string;
@@ -23,56 +24,64 @@ interface EditHoldingModalProps {
   holding: HoldingWithValue | null;
   onClose: () => void;
   onSuccess: () => void;
+  hasBenchmark?: boolean;
 }
 
-export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }: EditHoldingModalProps) {
+export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess, hasBenchmark }: EditHoldingModalProps) {
   const [quantity, setQuantity] = useState('');
-  const [averageBuyPrice, setAverageBuyPrice] = useState('');
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (holding) {
       setQuantity(Number(holding.quantity).toString());
-      setAverageBuyPrice(holding.averageBuyPrice ? Number(holding.averageBuyPrice).toString() : '');
-      setNotes(holding.notes || '');
     }
   }, [holding]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!holding || !quantity) {
-      setError('Vui lòng nhập số lượng');
+      toast.error('Vui lòng nhập số lượng');
       return;
     }
 
     setLoading(true);
-    setError('');
+    const coinName = holding.coinName;
 
     try {
-      const result = await portfolioApi.updateHolding(holding.id, {
-        quantity: parseFloat(quantity),
-        averageBuyPrice: averageBuyPrice ? parseFloat(averageBuyPrice) : undefined,
-        notes: notes || undefined,
-      });
+      const updatePromise = (async () => {
+        const result = await portfolioApi.updateHolding(holding.id, {
+          quantity: parseFloat(quantity),
+        });
 
-      if (result.error) {
-        setError(result.error);
-      } else {
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
         // Create a snapshot after updating holding
         try {
           await portfolioApi.createSnapshot();
         } catch (error) {
           console.log('Failed to create snapshot:', error);
-          // Don't show error to user, just log it
         }
 
-        onSuccess();
-        handleClose();
-      }
+        return result;
+      })();
+
+      toast.promise(
+        updatePromise,
+        {
+          loading: 'Đang cập nhật...',
+          success: `Đã cập nhật ${coinName}`,
+          error: 'Không thể cập nhật coin',
+        }
+      );
+
+      await updatePromise;
+
+      onSuccess();
+      handleClose();
     } catch {
-      setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
+      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
@@ -80,16 +89,13 @@ export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }
 
   const handleClose = () => {
     setQuantity('');
-    setAverageBuyPrice('');
-    setNotes('');
-    setError('');
     onClose();
   };
 
   if (!isOpen || !holding) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/20 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -104,12 +110,6 @@ export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }
 
         {/* Content */}
         <div className="p-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
-              {error}
-            </div>
-          )}
-
           {/* Coin Info */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between">
@@ -141,36 +141,6 @@ export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }
                 placeholder="0.00000000"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
-              />
-            </div>
-
-            {/* Average Buy Price */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Giá mua trung bình (USD) - Tùy chọn
-              </label>
-              <input
-                type="number"
-                value={averageBuyPrice}
-                onChange={(e) => setAverageBuyPrice(e.target.value)}
-                step="any"
-                min="0"
-                placeholder="Tùy chọn"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú - Tùy chọn
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                placeholder="Thêm ghi chú về holding này..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 

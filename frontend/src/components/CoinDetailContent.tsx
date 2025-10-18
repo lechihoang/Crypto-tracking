@@ -2,7 +2,6 @@ import React from 'react';
 import { TrendingUp, TrendingDown, Globe, MessageCircle, ExternalLink } from 'lucide-react';
 import { CryptoCurrency, CoinInfo } from '@/types/crypto';
 import PriceChart from '@/components/PriceChart';
-import { translateToVietnamese } from '@/utils/translations';
 
 const formatPrice = (price: number) => {
   if (price < 0.01) return `$${price.toFixed(6)}`;
@@ -50,37 +49,37 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
                   <span className="text-lg font-medium">
                     {isPositive ? '+' : ''}{priceChange24h.toFixed(2)}%
                   </span>
-                  <span className="text-gray-600">24h</span>
+                  <span className="text-gray-700">24h</span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-500">Xếp hạng</p>
+                <p className="text-sm text-gray-700">Xếp hạng</p>
                 <p className="text-2xl font-bold text-blue-600">#{coin.cmc_rank}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-gray-500">Thay đổi 1h</p>
+                <p className="text-sm text-gray-700">Thay đổi 1h</p>
                 <p className={`font-semibold ${coin.quote.USD.percent_change_1h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {coin.quote.USD.percent_change_1h >= 0 ? '+' : ''}{coin.quote.USD.percent_change_1h.toFixed(2)}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Thay đổi 7 ngày</p>
+                <p className="text-sm text-gray-700">Thay đổi 7 ngày</p>
                 <p className={`font-semibold ${coin.quote.USD.percent_change_7d >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {coin.quote.USD.percent_change_7d >= 0 ? '+' : ''}{coin.quote.USD.percent_change_7d.toFixed(2)}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Thay đổi 30 ngày</p>
+                <p className="text-sm text-gray-700">Thay đổi 30 ngày</p>
                 <p className={`font-semibold ${coin.quote.USD.percent_change_30d >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {coin.quote.USD.percent_change_30d >= 0 ? '+' : ''}{coin.quote.USD.percent_change_30d.toFixed(2)}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Khối lượng 24h</p>
-                <p className="font-semibold">{formatMarketCap(coin.quote.USD.volume_24h)}</p>
+                <p className="text-sm text-gray-700">Khối lượng 24h</p>
+                <p className="font-semibold text-gray-900">{formatMarketCap(coin.quote.USD.volume_24h)}</p>
               </div>
             </div>
           </div>
@@ -93,31 +92,31 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
         <div className="space-y-6">
           {/* Market Stats */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">Thống kê thị trường</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Thống kê thị trường</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-500">Vốn hóa thị trường</span>
-                <span className="font-medium">{formatMarketCap(coin.quote.USD.market_cap)}</span>
+                <span className="text-gray-700">Vốn hóa thị trường</span>
+                <span className="font-semibold text-gray-900">{formatMarketCap(coin.quote.USD.market_cap)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Nguồn cung lưu hành</span>
-                <span className="font-medium">{formatSupply(coin.circulating_supply)} {coin.symbol}</span>
+                <span className="text-gray-700">Nguồn cung lưu hành</span>
+                <span className="font-semibold text-gray-900">{formatSupply(coin.circulating_supply)} {coin.symbol}</span>
               </div>
               {coin.total_supply && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Tổng nguồn cung</span>
-                  <span className="font-medium">{formatSupply(coin.total_supply)} {coin.symbol}</span>
+                  <span className="text-gray-700">Tổng nguồn cung</span>
+                  <span className="font-semibold text-gray-900">{formatSupply(coin.total_supply)} {coin.symbol}</span>
                 </div>
               )}
               {coin.max_supply && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Nguồn cung tối đa</span>
-                  <span className="font-medium">{formatSupply(coin.max_supply)} {coin.symbol}</span>
+                  <span className="text-gray-700">Nguồn cung tối đa</span>
+                  <span className="font-semibold text-gray-900">{formatSupply(coin.max_supply)} {coin.symbol}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-gray-500">Cặp giao dịch</span>
-                <span className="font-medium">{coin.num_market_pairs}</span>
+                <span className="text-gray-700">Cặp giao dịch</span>
+                <span className="font-semibold text-gray-900">{coinInfo?.num_market_pairs || coin.num_market_pairs || 0}</span>
               </div>
             </div>
           </div>
@@ -125,11 +124,11 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
           {/* About */}
           {coinInfo && (
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h3 className="text-lg font-semibold mb-4">Giới thiệu về {coinInfo.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Giới thiệu về {coinInfo.name}</h3>
               {coinInfo.description && (
                 <div className="text-gray-700 text-base mb-6 leading-relaxed">
                   <p className="whitespace-pre-wrap">
-                    {translateToVietnamese(coinInfo.description.slice(0, 500))}...
+                    {coinInfo.description.slice(0, 500)}...
                   </p>
                 </div>
               )}

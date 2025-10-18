@@ -21,6 +21,11 @@ export class SupabaseService {
     return this.supabase;
   }
 
+  // Admin client with service role key (full access)
+  getAdminClient() {
+    return this.supabase;
+  }
+
   // Create a client with anon key for user operations
   getAnonClient() {
     return createClient(

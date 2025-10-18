@@ -72,13 +72,22 @@ export default function PortfolioChart() {
     }).format(value);
   };
 
+  const formatCurrencyDetailed = (value: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 8,
+    }).format(value);
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="text-sm text-gray-600">{payload[0].payload.formattedDate}</p>
           <p className="text-lg font-semibold text-blue-600">
-            {formatCurrency(payload[0].value)}
+            {formatCurrencyDetailed(payload[0].value)}
           </p>
         </div>
       );
@@ -130,49 +139,41 @@ export default function PortfolioChart() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Tổng giá trị đầu tư theo thời gian</h3>
-          {chartData.length >= 2 && (
-            <div className="flex items-center gap-2 mt-1">
-              {changeInfo.isPositive ? (
-                <TrendingUp className="w-4 h-4 text-green-600" />
-              ) : (
-                <TrendingDown className="w-4 h-4 text-red-600" />
-              )}
-              <span className={`text-sm font-medium ${
-                changeInfo.isPositive ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {changeInfo.isPositive ? '+' : ''}{formatCurrency(changeInfo.change)}
-                ({changeInfo.isPositive ? '+' : ''}{changeInfo.percentage.toFixed(2)}%)
-              </span>
-              <span className="text-sm text-gray-500">
-                trong {timeRange} ngày qua
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
           {[7, 30, 90].map((days) => (
             <button
               key={days}
               onClick={() => setTimeRange(days)}
-              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 timeRange === days
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {days}D
+              {days}d
             </button>
           ))}
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <h3 className="text-lg font-semibold">Biểu đồ giá trị portfolio</h3>
+          {chartData.length >= 2 && (
+            <div className={`flex items-center gap-1 ${
+              changeInfo.isPositive ? 'text-green-500' : 'text-red-500'
+            }`}>
+              <span className="font-medium">
+                {changeInfo.isPositive ? '+' : ''}{changeInfo.percentage.toFixed(2)}%
+              </span>
+              <span className="text-sm text-gray-500">({timeRange}d)</span>
+            </div>
+          )}
         </div>
       </div>
 
       {chartData.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-16">
           <p className="text-gray-600 mb-4">
             Chưa có dữ liệu lịch sử portfolio
           </p>
@@ -181,7 +182,7 @@ export default function PortfolioChart() {
           </p>
         </div>
       ) : chartData.length === 1 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-16">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <TrendingUp className="w-8 h-8 text-blue-600" />
           </div>
@@ -196,15 +197,14 @@ export default function PortfolioChart() {
           </p>
         </div>
       ) : (
-        <div className="h-64">
+        <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="formattedDate"
-                stroke="#64748b"
+                stroke="#6b7280"
                 fontSize={12}
-                tick={{ fill: '#64748b' }}
               />
               <YAxis
                 domain={(() => {
@@ -218,19 +218,18 @@ export default function PortfolioChart() {
                     maxValue + padding
                   ];
                 })()}
-                stroke="#64748b"
+                stroke="#6b7280"
                 fontSize={12}
-                tick={{ fill: '#64748b' }}
                 tickFormatter={(value) => formatCurrency(value)}
               />
               <Tooltip content={<CustomTooltip />} />
               <Line
-                type="monotone"
+                type="natural"
                 dataKey="value"
-                stroke="#2563eb"
+                stroke={changeInfo.isPositive ? '#10b981' : '#ef4444'}
                 strokeWidth={2}
-                dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#2563eb', strokeWidth: 2 }}
+                dot={false}
+                activeDot={{ r: 4, stroke: changeInfo.isPositive ? '#10b981' : '#ef4444', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>

@@ -108,4 +108,55 @@ export class PortfolioController {
     const numDays = days ? parseInt(days, 10) : 7;
     return this.portfolioService.getPortfolioValueHistory(userId, numDays);
   }
+
+  @Post("benchmark")
+  async setBenchmark(
+    @Headers("authorization") authHeader: string,
+    @Body("benchmarkValue") benchmarkValue: number,
+  ) {
+    const userId = await this.getUserFromToken(authHeader);
+    return this.portfolioService.setBenchmark(userId, benchmarkValue);
+  }
+
+  @Get("benchmark")
+  async getBenchmark(@Headers("authorization") authHeader: string) {
+    const userId = await this.getUserFromToken(authHeader);
+    const benchmark = await this.portfolioService.getBenchmark(userId);
+
+    // Also return current portfolio value for comparison
+    const { totalValue } =
+      await this.portfolioService.getPortfolioValue(userId);
+
+    if (!benchmark) {
+      return {
+        benchmark: null,
+        currentValue: totalValue,
+        profitLoss: 0,
+        profitLossPercentage: 0,
+      };
+    }
+
+    const profitLoss = totalValue - Number(benchmark.benchmarkValue);
+    const profitLossPercentage =
+      Number(benchmark.benchmarkValue) > 0
+        ? (profitLoss / Number(benchmark.benchmarkValue)) * 100
+        : 0;
+
+    return {
+      benchmark: {
+        value: Number(benchmark.benchmarkValue),
+        setAt: benchmark.updatedAt,
+      },
+      currentValue: totalValue,
+      profitLoss,
+      profitLossPercentage,
+    };
+  }
+
+  @Delete("benchmark")
+  async deleteBenchmark(@Headers("authorization") authHeader: string) {
+    const userId = await this.getUserFromToken(authHeader);
+    await this.portfolioService.deleteBenchmark(userId);
+    return { message: "Benchmark deleted successfully" };
+  }
 }

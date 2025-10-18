@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, MessageSquarePlus } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Message {
   id: string;
@@ -11,18 +12,20 @@ interface Message {
   timestamp: Date;
 }
 
+const INITIAL_MESSAGE: Message = {
+  id: '1',
+  content: 'Xin chào! Tôi là trợ lý crypto của bạn. Tôi có thể giúp bạn trả lời các câu hỏi về tiền điện tử, phân tích thị trường, mẹo giao dịch và nhiều hơn nữa. Bạn muốn biết điều gì?',
+  sender: 'bot',
+  timestamp: new Date(),
+};
+
 export default function ChatWindow() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hi! I\'m your crypto assistant. I can help you with cryptocurrency questions, market analysis, trading tips, and more. What would you like to know?',
-      sender: 'bot',
-      timestamp: new Date(),
-    },
-  ]);
+  const { user, loading: authLoading } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,6 +36,55 @@ export default function ChatWindow() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load chat history on mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (user) {
+        // For logged-in users, load from database
+        try {
+          setIsLoadingHistory(true);
+          const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/chatbot/history`, {
+            params: { userId: user.id },
+          });
+
+          if (response.data.messages && response.data.messages.length > 0) {
+            const loadedMessages = response.data.messages
+              .filter((msg: { sender: string; id: string; content: string; timestamp: string }) => msg.sender !== 'system') // Don't show system messages
+              .map((msg: { sender: 'user' | 'bot'; id: string; content: string; timestamp: string }) => ({
+                id: msg.id,
+                content: msg.content,
+                sender: msg.sender,
+                timestamp: new Date(msg.timestamp),
+              }));
+
+            if (loadedMessages.length > 0) {
+              setMessages(loadedMessages);
+
+              // Set sessionId from response
+              if (response.data.sessionId) {
+                setSessionId(response.data.sessionId);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load chat history:', error);
+          // Don't show error to user, just use initial message
+          setMessages([INITIAL_MESSAGE]);
+        } finally {
+          setIsLoadingHistory(false);
+        }
+      } else {
+        // For guests, load sessionId from localStorage
+        const savedSessionId = localStorage.getItem('chatSessionId');
+        if (savedSessionId) {
+          setSessionId(savedSessionId);
+        }
+      }
+    };
+
+    loadChatHistory();
+  }, [user]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,10 +103,21 @@ export default function ChatWindow() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chatbot/chat`, {
+      const requestBody: {
+        message: string;
+        sessionId?: string;
+        userId?: string;
+      } = {
         message: userMessage.content,
         sessionId: sessionId || undefined,
-      });
+      };
+
+      // Add userId for logged-in users
+      if (user) {
+        requestBody.userId = user.id;
+      }
+
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chatbot/chat`, requestBody);
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -66,8 +129,14 @@ export default function ChatWindow() {
       setMessages(prev => [...prev, botMessage]);
 
       // Store session ID for conversation continuity
-      if (response.data.sessionId && !sessionId) {
-        setSessionId(response.data.sessionId);
+      if (response.data.sessionId) {
+        const newSessionId = response.data.sessionId;
+        setSessionId(newSessionId);
+
+        // For guests, save sessionId to localStorage
+        if (!user) {
+          localStorage.setItem('chatSessionId', newSessionId);
+        }
       }
 
     } catch (error) {
@@ -87,6 +156,27 @@ export default function ChatWindow() {
     }
   };
 
+  const handleNewConversation = async () => {
+    if (user) {
+      // For logged-in users, clear history from database
+      try {
+        await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/chatbot/history`, {
+          params: { userId: user.id },
+        });
+      } catch (error) {
+        console.error('Failed to clear chat history:', error);
+      }
+    } else {
+      // For guests, clear localStorage
+      localStorage.removeItem('chatSessionId');
+    }
+
+    // Reset UI state
+    setMessages([INITIAL_MESSAGE]);
+    setSessionId('');
+    setInputMessage('');
+  };
+
   const formatMessage = (content: string) => {
     // Simple markdown-like formatting
     return content
@@ -95,8 +185,28 @@ export default function ChatWindow() {
       .replace(/\n/g, '<br />');
   };
 
+  if (isLoadingHistory || authLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
+      {/* Header with New Conversation button */}
+      <div className="border-b border-gray-200 p-3 bg-white flex items-center justify-end">
+        <button
+          onClick={handleNewConversation}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          title="Tạo cuộc trò chuyện mới"
+        >
+          <MessageSquarePlus size={16} />
+          <span>Cuộc trò chuyện mới</span>
+        </button>
+      </div>
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {messages.map((message) => (
@@ -178,7 +288,7 @@ export default function ChatWindow() {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Ask me about crypto..."
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
           />
           <button
@@ -193,10 +303,6 @@ export default function ChatWindow() {
             )}
           </button>
         </form>
-
-        <div className="text-xs text-gray-500 mt-2 text-center">
-          Powered by Groq AI • Free crypto advice
-        </div>
       </div>
     </div>
   );

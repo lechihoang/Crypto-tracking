@@ -1,9 +1,9 @@
-import { IsString, IsNumber, IsEnum, MinLength, Min } from "class-validator";
+import { IsString, IsNumber, IsEnum, MinLength, Min, IsOptional } from "class-validator";
 
 export class CreateAlertDto {
-  @IsString()
-  @MinLength(1, { message: "Coin ID không được để trống" })
-  coinId: string;
+  @IsNumber()
+  @Min(1, { message: "Coin ID không hợp lệ" })
+  coinId: number;
 
   @IsString()
   @MinLength(1, { message: "Symbol không được để trống" })
@@ -12,6 +12,10 @@ export class CreateAlertDto {
   @IsString()
   @MinLength(1, { message: "Tên coin không được để trống" })
   coinName: string;
+
+  @IsOptional()
+  @IsString()
+  coinImage?: string;
 
   @IsEnum(["above", "below"])
   condition: "above" | "below";

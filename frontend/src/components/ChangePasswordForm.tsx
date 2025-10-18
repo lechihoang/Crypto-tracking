@@ -5,12 +5,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { ChangePasswordSchema, ChangePasswordFormData } from '@/lib/validations';
-import { Lock, Eye, EyeOff, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function ChangePasswordForm() {
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,33 +31,40 @@ export default function ChangePasswordForm() {
 
   const onSubmit = async (data: ChangePasswordFormData) => {
     setLoading(true);
-    setError('');
-    setSuccess(false);
 
     try {
-      const result = await authApi.changePassword({
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      });
+      const changePasswordPromise = (async () => {
+        const result = await authApi.changePassword({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        });
 
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setSuccess(true);
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
         reset();
-        // Hide success message after 3 seconds
-        setTimeout(() => setSuccess(false), 3000);
-      }
+        return result;
+      })();
+
+      toast.promise(
+        changePasswordPromise,
+        {
+          loading: 'Đang đổi mật khẩu...',
+          success: 'Đã đổi mật khẩu thành công!',
+          error: (err) => err.message || 'Không thể đổi mật khẩu',
+        }
+      );
+
+      await changePasswordPromise;
     } catch (err) {
-      setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
+      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputFocus = () => {
-    setError('');
-    setSuccess(false);
     clearErrors();
   };
 
@@ -72,38 +78,6 @@ export default function ChangePasswordForm() {
           Cập nhật mật khẩu của bạn để bảo mật tài khoản tốt hơn
         </p>
       </div>
-
-      {success && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-                Đổi mật khẩu thành công!
-              </h3>
-              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                Mật khẩu của bạn đã được cập nhật thành công.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Có lỗi xảy ra
-              </h3>
-              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                {error}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Current Password */}

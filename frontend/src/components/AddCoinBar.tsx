@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader, X } from 'lucide-react';
 import { portfolioApi, clientApi } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface Coin {
   id: number;
   name: string;
   symbol: string;
   slug: string;
+  image?: string;
 }
 
 interface AddCoinBarProps {
@@ -57,6 +59,7 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
           name: coin.name,
           symbol: coin.symbol,
           slug: coin.slug,
+          image: coin.image,
         }));
         setCoins(coinData);
         setFilteredCoins(coinData.slice(0, 10));
@@ -77,41 +80,56 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCoin || !quantity) {
-      setError('Vui lòng chọn coin và nhập số lượng');
+      toast.error('Vui lòng chọn coin và nhập số lượng');
       return;
     }
 
     setLoading(true);
-    setError('');
+    const coinName = selectedCoin.name;
 
     try {
-      const result = await portfolioApi.addHolding({
-        coinId: selectedCoin.slug,
-        coinSymbol: selectedCoin.symbol,
-        coinName: selectedCoin.name,
-        quantity: parseFloat(quantity),
-      });
+      const addPromise = (async () => {
+        const result = await portfolioApi.addHolding({
+          coinId: selectedCoin.slug,
+          coinSymbol: selectedCoin.symbol,
+          coinName: selectedCoin.name,
+          coinImage: selectedCoin.image,
+          quantity: parseFloat(quantity),
+        });
 
-      if (result.error) {
-        setError(result.error);
-      } else {
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
         // Create a snapshot after adding coin
         try {
           await portfolioApi.createSnapshot();
         } catch (error) {
           console.log('Failed to create snapshot:', error);
-          // Don't show error to user, just log it
         }
 
-        // Reset form
-        setSelectedCoin(null);
-        setSearchTerm('');
-        setQuantity('');
-        setShowForm(false);
-        onSuccess();
-      }
+        return result;
+      })();
+
+      toast.promise(
+        addPromise,
+        {
+          loading: 'Đang thêm coin...',
+          success: `Đã thêm ${coinName} vào danh mục`,
+          error: 'Không thể thêm coin',
+        }
+      );
+
+      await addPromise;
+
+      // Reset form
+      setSelectedCoin(null);
+      setSearchTerm('');
+      setQuantity('');
+      setShowForm(false);
+      onSuccess();
     } catch {
-      setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
+      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
@@ -233,14 +251,17 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
             <button
               type="submit"
               disabled={loading || !selectedCoin || !quantity}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 min-w-0"
             >
               {loading ? (
-                <Loader className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Đang thêm...</span>
+                </>
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Thêm
+                  <span>Thêm</span>
                 </>
               )}
             </button>

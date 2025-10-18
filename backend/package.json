@@ -17,9 +17,15 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:embedding": "ts-node -r tsconfig-paths/register scripts/test-embedding.ts",
+    "test:pinecone": "ts-node -r tsconfig-paths/register scripts/test-pinecone.ts",
+    "test:scraper": "ts-node -r tsconfig-paths/register scripts/test-scraper.ts",
+    "debug:scraper": "ts-node -r tsconfig-paths/register scripts/debug-scraper.ts",
+    "seed:rag": "ts-node -r tsconfig-paths/register scripts/seed-data.ts"
   },
   "dependencies": {
+    "@google-cloud/translate": "^9.2.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

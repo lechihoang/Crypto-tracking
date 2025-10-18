@@ -17,14 +17,17 @@ export class PriceAlert {
   @Column({ name: "user_id", type: "uuid" })
   userId: string;
 
-  @Column({ name: "coin_id", type: "varchar", length: 100 })
-  coinId: string;
+  @Column({ name: "coin_id", type: "integer" })
+  coinId: number;
 
   @Column({ name: "coin_symbol", type: "varchar", length: 20 })
   coinSymbol: string;
 
   @Column({ name: "coin_name", type: "varchar", length: 100 })
   coinName: string;
+
+  @Column({ name: "coin_image", type: "varchar", length: 500, nullable: true })
+  coinImage?: string;
 
   @Column({
     type: "enum",

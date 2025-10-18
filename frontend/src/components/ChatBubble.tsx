@@ -69,6 +69,7 @@ export default function ChatBubble() {
           isOpen && !isMinimized ? 'scale-90' : 'scale-100'
         }`}
         aria-label="Open crypto assistant chat"
+        data-tooltip="Crypto chatbot"
       >
         {isOpen && !isMinimized ? (
           <Minimize2 size={24} className="group-hover:scale-110 transition-transform" />

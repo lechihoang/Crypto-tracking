@@ -47,39 +47,63 @@ const backendApi = axios.create({
 });
 
 export const clientApi = {
-  async getLatestListings(limit: number = 100) {
-    const response = await backendApi.get(`/crypto/top?limit=${limit}`);
+  async getLatestListings(limit: number = 100, page: number = 1) {
+    const response = await backendApi.get(`/crypto/top?limit=${limit}&page=${page}`);
     if (response.status !== 200) throw new Error('Failed to fetch listings');
+
+    interface CoinGeckoData {
+      id: string;
+      name: string;
+      symbol: string;
+      image?: string;
+      current_price: number;
+      market_cap: number;
+      market_cap_rank?: number;
+      total_volume?: number;
+      circulating_supply?: number;
+      total_supply?: number;
+      max_supply?: number;
+      last_updated?: string;
+      price_change_percentage_1h_in_currency?: number;
+      price_change_percentage_24h?: number;
+      price_change_percentage_7d_in_currency?: number;
+      fully_diluted_valuation?: number;
+      sparkline_in_7d?: {
+        price: number[];
+      };
+    }
 
     // Transform backend response to match frontend expectations
     return {
-      data: (response.data as BackendCoinData[]).map((coin, index) => ({
+      data: (response.data as CoinGeckoData[]).map((coin, index: number) => ({
         id: index + 1, // Use index as numeric ID for compatibility
         name: coin.name,
         symbol: coin.symbol,
         slug: coin.id, // Store the string ID in slug field
+        image: coin.image, // Store the image URL from CoinGecko
         cmc_rank: coin.market_cap_rank || 1,
         num_market_pairs: 0,
-        circulating_supply: 0,
-        total_supply: 0,
-        max_supply: 0,
-        last_updated: new Date().toISOString(),
+        circulating_supply: coin.circulating_supply || 0,
+        total_supply: coin.total_supply || 0,
+        max_supply: coin.max_supply || 0,
+        last_updated: coin.last_updated || new Date().toISOString(),
         date_added: new Date().toISOString(),
         tags: [],
         platform: null,
+        sparkline_in_7d: coin.sparkline_in_7d,
         quote: {
           USD: {
             price: coin.current_price,
-            volume_24h: 0,
+            volume_24h: coin.total_volume || 0,
             volume_change_24h: 0,
-            percent_change_1h: 0,
-            percent_change_24h: coin.price_change_percentage_24h,
-            percent_change_7d: 0,
+            percent_change_1h: coin.price_change_percentage_1h_in_currency || 0,
+            percent_change_24h: coin.price_change_percentage_24h || 0,
+            percent_change_7d: coin.price_change_percentage_7d_in_currency || 0,
             percent_change_30d: 0,
             market_cap: coin.market_cap,
             market_cap_dominance: 0,
-            fully_diluted_market_cap: coin.market_cap,
-            last_updated: new Date().toISOString(),
+            fully_diluted_market_cap: coin.fully_diluted_valuation || coin.market_cap,
+            last_updated: coin.last_updated || new Date().toISOString(),
           }
         }
       }))
@@ -90,7 +114,9 @@ export const clientApi = {
     const response = await backendApi.get(`/crypto/${id}`);
     if (response.status !== 200) throw new Error('Failed to fetch coin info');
 
-    const coinData = response.data as BackendCoinDetailData;
+    const coinData = response.data as BackendCoinDetailData & {
+      tickers?: any[];
+    };
     // Transform backend response to match frontend expectations
     return {
       data: {
@@ -128,46 +154,48 @@ export const clientApi = {
           self_reported_circulating_supply: 0,
           self_reported_tags: null,
           self_reported_market_cap: 0,
+          num_market_pairs: coinData.tickers?.length || 0,
         }
       }
     };
   },
 
   async getQuotes(ids: string) {
-    const response = await backendApi.get(`/crypto/${ids}`);
+    // Get market data from the new endpoint
+    const response = await backendApi.get(`/crypto/${ids}/market`);
     if (response.status !== 200) throw new Error('Failed to fetch quotes');
 
-    const coinData = response.data as BackendCoinDetailData;
+    const marketData = response.data;
     // Transform backend response to match frontend expectations
     return {
       data: {
         [ids]: {
           id: parseInt(ids) || 1,
-          name: coinData.name,
-          symbol: coinData.symbol,
-          slug: coinData.id,
-          cmc_rank: coinData.market_cap_rank || 1,
+          name: marketData.name,
+          symbol: marketData.symbol,
+          slug: marketData.id,
+          cmc_rank: marketData.market_cap_rank || 1,
           num_market_pairs: 0,
-          circulating_supply: 0,
-          total_supply: 0,
-          max_supply: 0,
-          last_updated: new Date().toISOString(),
+          circulating_supply: marketData.circulating_supply || 0,
+          total_supply: marketData.total_supply || 0,
+          max_supply: marketData.max_supply || 0,
+          last_updated: marketData.last_updated || new Date().toISOString(),
           date_added: new Date().toISOString(),
           tags: [],
           platform: null,
           quote: {
             USD: {
-              price: coinData.market_data?.current_price?.usd || 0,
-              volume_24h: 0,
+              price: marketData.current_price || 0,
+              volume_24h: marketData.total_volume || 0,
               volume_change_24h: 0,
-              percent_change_1h: 0,
-              percent_change_24h: coinData.market_data?.price_change_percentage_24h || 0,
-              percent_change_7d: 0,
-              percent_change_30d: 0,
-              market_cap: coinData.market_data?.market_cap?.usd || 0,
+              percent_change_1h: marketData.price_change_percentage_1h_in_currency || 0,
+              percent_change_24h: marketData.price_change_percentage_24h || 0,
+              percent_change_7d: marketData.price_change_percentage_7d_in_currency || 0,
+              percent_change_30d: marketData.price_change_percentage_30d_in_currency || 0,
+              market_cap: marketData.market_cap || 0,
               market_cap_dominance: 0,
-              fully_diluted_market_cap: coinData.market_data?.market_cap?.usd || 0,
-              last_updated: new Date().toISOString(),
+              fully_diluted_market_cap: marketData.fully_diluted_valuation || marketData.market_cap || 0,
+              last_updated: marketData.last_updated || new Date().toISOString(),
             }
           }
         }
@@ -179,6 +207,57 @@ export const clientApi = {
     const response = await backendApi.get(`/crypto/${coinId}/history?days=${days}`);
     if (response.status !== 200) throw new Error('Failed to fetch price history');
     return response.data;
+  },
+
+  async getCoinInfoVietnamese(id: string) {
+    const response = await backendApi.get(`/crypto/${id}/vi`);
+    if (response.status !== 200) throw new Error('Failed to fetch coin info in Vietnamese');
+
+    const coinData = response.data as BackendCoinDetailData & {
+      description?: { vi?: string };
+      tickers?: any[];
+    };
+    // Transform backend response to match frontend expectations
+    return {
+      data: {
+        [id]: {
+          id: parseInt(id) || 1,
+          name: coinData.name,
+          symbol: coinData.symbol,
+          category: '',
+          description: coinData.description?.vi || coinData.description?.en || '',
+          slug: coinData.id,
+          logo: coinData.image?.large || '',
+          subreddit: '',
+          notice: '',
+          tags: [],
+          tag_names: [],
+          tag_groups: [],
+          urls: {
+            website: coinData.links?.homepage || [],
+            technical_doc: coinData.links?.whitepaper || [],
+            twitter: coinData.links?.twitter_screen_name ? [`https://twitter.com/${coinData.links.twitter_screen_name}`] : [],
+            reddit: coinData.links?.subreddit_url ? [coinData.links.subreddit_url] : [],
+            message_board: coinData.links?.official_forum_url || [],
+            announcement: coinData.links?.announcement_url || [],
+            chat: coinData.links?.chat_url || [],
+            explorer: coinData.links?.blockchain_site || [],
+            source_code: coinData.links?.repos_url?.github || [],
+            facebook: [],
+          },
+          platform: null,
+          date_added: new Date().toISOString(),
+          twitter_username: coinData.links?.twitter_screen_name || '',
+          is_hidden: 0,
+          date_launched: new Date().toISOString(),
+          contract_address: [],
+          self_reported_circulating_supply: 0,
+          self_reported_tags: null,
+          self_reported_market_cap: 0,
+          num_market_pairs: coinData.tickers?.length || 0,
+        }
+      }
+    };
   },
 };
 
@@ -357,15 +436,15 @@ export const authApi = {
 // Price Alerts API interfaces
 interface PriceAlert {
   id: string;
-  user_id: string;
-  coin_id: number;
-  coin_symbol: string;
-  coin_name: string;
+  userId: string;
+  coinId: number;
+  coinSymbol: string;
+  coinName: string;
   condition: 'above' | 'below';
-  target_price: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  targetPrice: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CreateAlertRequest {
@@ -490,6 +569,7 @@ interface CreateHoldingRequest {
   coinId: string;
   coinSymbol: string;
   coinName: string;
+  coinImage?: string;
   quantity: number;
   averageBuyPrice?: number;
   notes?: string;
@@ -675,6 +755,64 @@ export const portfolioApi = {
       const err = error as { response?: { data?: { message?: string } } };
       return {
         error: err.response?.data?.message || 'Lấy lịch sử giá trị portfolio thất bại'
+      };
+    }
+  },
+
+  async setBenchmark(benchmarkValue: number): Promise<PortfolioResponse> {
+    try {
+      const token = authApi.getToken();
+      if (!token) {
+        return { error: 'Không tìm thấy token xác thực' };
+      }
+
+      const response = await backendApi.post('/portfolio/benchmark',
+        { benchmarkValue },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return { data: response.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        error: err.response?.data?.message || 'Đặt mốc thất bại'
+      };
+    }
+  },
+
+  async getBenchmark(): Promise<PortfolioResponse> {
+    try {
+      const token = authApi.getToken();
+      if (!token) {
+        return { error: 'Không tìm thấy token xác thực' };
+      }
+
+      const response = await backendApi.get('/portfolio/benchmark', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return { data: response.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        error: err.response?.data?.message || 'Lấy thông tin mốc thất bại'
+      };
+    }
+  },
+
+  async deleteBenchmark(): Promise<PortfolioResponse> {
+    try {
+      const token = authApi.getToken();
+      if (!token) {
+        return { error: 'Không tìm thấy token xác thực' };
+      }
+
+      const response = await backendApi.delete('/portfolio/benchmark', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return { message: response.data.message };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        error: err.response?.data?.message || 'Xóa mốc thất bại'
       };
     }
   }

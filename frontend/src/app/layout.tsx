@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ChatBubble from "@/components/ChatBubble";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,10 +33,39 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        {children}
+        <Header />
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
         <ChatBubble />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#fff',
+              color: '#363636',
+              borderRadius: '10px',
+              padding: '16px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            },
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
       </body>
     </html>
   );

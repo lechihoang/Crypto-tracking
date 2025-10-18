@@ -17,6 +17,7 @@ export class AlertsService {
     userId: string,
     createAlertDto: CreateAlertDto,
   ): Promise<PriceAlert> {
+    console.log(`[AlertsService] Creating alert for user ${userId}:`, createAlertDto);
     const alert = this.alertRepository.create({
       userId,
       coinId: createAlertDto.coinId,
@@ -27,14 +28,19 @@ export class AlertsService {
       isActive: true,
     });
 
-    return this.alertRepository.save(alert);
+    const savedAlert = await this.alertRepository.save(alert);
+    console.log(`[AlertsService] Alert created successfully:`, savedAlert);
+    return savedAlert;
   }
 
   async getUserAlerts(userId: string): Promise<PriceAlert[]> {
-    return this.alertRepository.find({
+    console.log(`[AlertsService] Fetching alerts for user: ${userId}`);
+    const alerts = await this.alertRepository.find({
       where: { userId },
       order: { createdAt: "DESC" },
     });
+    console.log(`[AlertsService] Found ${alerts.length} alerts:`, JSON.stringify(alerts, null, 2));
+    return alerts;
   }
 
   async deleteAlert(userId: string, alertId: string): Promise<void> {
@@ -70,6 +76,7 @@ export class AlertsService {
   }
 
   async disableAlert(alertId: string): Promise<void> {
-    await this.alertRepository.update(alertId, { isActive: false });
+    // Delete the alert instead of just disabling it
+    await this.alertRepository.delete(alertId);
   }
 }

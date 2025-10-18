@@ -22,11 +22,11 @@ export default function CoinDetailPage() {
 
       try {
         setLoading(true);
-        
-        // Fetch price data and coin info in parallel
+
+        // Fetch price data and coin info in Vietnamese in parallel
         const [quotesResponse, infoResponse] = await Promise.all([
           clientApi.getQuotes(params.id as string),
-          clientApi.getCoinInfo(params.id as string),
+          clientApi.getCoinInfoVietnamese(params.id as string),
         ]);
 
         if (quotesResponse.data) {
@@ -39,7 +39,7 @@ export default function CoinDetailPage() {
           setCoinInfo(infoData);
         }
       } catch (err) {
-        setError('Failed to fetch coin data');
+        setError('Không thể tải dữ liệu coin');
         console.error(err);
       } finally {
         setLoading(false);
