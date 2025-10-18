@@ -121,3 +121,5 @@ Thumbs.db
 # Turbo
 .turbo
 
+# Documentation files
+CLAUDE.md
