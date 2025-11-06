@@ -1,11 +1,11 @@
 import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import { randomUUID } from "crypto";
 import { RagService } from "../rag/rag.service";
-import { ChatMessage } from "../entities";
+import { ChatMessage } from "../schemas/chat-message.schema";
 
 interface GroqMessage {
   role: "system" | "user" | "assistant";
@@ -30,8 +30,8 @@ export class ChatbotService {
   private sessions = new Map<string, GroqMessage[]>();
 
   constructor(
-    @InjectRepository(ChatMessage)
-    private chatMessageRepository: Repository<ChatMessage>,
+    @InjectModel(ChatMessage.name)
+    private chatMessageModel: Model<ChatMessage>,
     private configService: ConfigService,
     private ragService: RagService,
   ) {
@@ -56,7 +56,9 @@ export class ChatbotService {
       // Get conversation history from database or memory
       let conversation: GroqMessage[];
       if (userId) {
-        console.log(`[ChatBot] Loading conversation from DB for user ${userId}`);
+        console.log(
+          `[ChatBot] Loading conversation from DB for user ${userId}`,
+        );
         // For logged-in users, load from database
         conversation = await this.loadConversationFromDB(sessionId, userId);
       } else {
@@ -165,21 +167,23 @@ Current context: You're integrated into a crypto tracking web application where 
         message: assistantMessage,
         sessionId,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Chatbot service error:", error);
 
-      if (error.response?.status === 401) {
-        throw new HttpException(
-          "AI service authentication failed",
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new HttpException(
+            "AI service authentication failed",
+            HttpStatus.UNAUTHORIZED,
+          );
+        }
 
-      if (error.response?.status === 429) {
-        throw new HttpException(
-          "AI service rate limit exceeded. Please try again later.",
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
+        if (error.response?.status === 429) {
+          throw new HttpException(
+            "AI service rate limit exceeded. Please try again later.",
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
       }
 
       throw new HttpException(
@@ -196,17 +200,17 @@ Current context: You're integrated into a crypto tracking web application where 
     content: string,
   ): Promise<void> {
     try {
-      const message = this.chatMessageRepository.create({
+      const message = new this.chatMessageModel({
         sessionId,
         userId,
         role,
         content,
       });
-      await this.chatMessageRepository.save(message);
+      await message.save();
       console.log(
         `[ChatBot] Saved message: role=${role}, userId=${userId}, sessionId=${sessionId}`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[ChatBot] Error saving message to DB:", error);
       throw error;
     }
@@ -216,10 +220,10 @@ Current context: You're integrated into a crypto tracking web application where 
     sessionId: string,
     userId: string,
   ): Promise<GroqMessage[]> {
-    const messages = await this.chatMessageRepository.find({
-      where: { sessionId, userId },
-      order: { createdAt: "ASC" },
-    });
+    const messages = await this.chatMessageModel
+      .find({ sessionId, userId })
+      .sort({ createdAt: 1 })
+      .exec();
 
     return messages.map((msg) => ({
       role: msg.role,
@@ -237,10 +241,10 @@ Current context: You're integrated into a crypto tracking web application where 
       );
 
       if (sessionId) {
-        const messages = await this.chatMessageRepository.find({
-          where: { userId, sessionId },
-          order: { createdAt: "ASC" },
-        });
+        const messages = await this.chatMessageModel
+          .find({ userId, sessionId })
+          .sort({ createdAt: 1 })
+          .exec();
         console.log(
           `[ChatBot] Found ${messages.length} messages for specific session`,
         );
@@ -248,28 +252,26 @@ Current context: You're integrated into a crypto tracking web application where 
       }
 
       // Get latest session for user
-      const latestMessage = await this.chatMessageRepository.findOne({
-        where: { userId },
-        order: { createdAt: "DESC" },
-      });
+      const latestMessage = await this.chatMessageModel
+        .findOne({ userId })
+        .sort({ createdAt: -1 })
+        .exec();
 
       if (!latestMessage) {
         console.log(`[ChatBot] No messages found for user`);
         return [];
       }
 
-      console.log(
-        `[ChatBot] Found latest session: ${latestMessage.sessionId}`,
-      );
+      console.log(`[ChatBot] Found latest session: ${latestMessage.sessionId}`);
 
-      const messages = await this.chatMessageRepository.find({
-        where: { userId, sessionId: latestMessage.sessionId },
-        order: { createdAt: "ASC" },
-      });
+      const messages = await this.chatMessageModel
+        .find({ userId, sessionId: latestMessage.sessionId })
+        .sort({ createdAt: 1 })
+        .exec();
 
       console.log(`[ChatBot] Returning ${messages.length} messages`);
       return messages;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[ChatBot] Error getting chat history:", error);
       return [];
     }
@@ -278,10 +280,10 @@ Current context: You're integrated into a crypto tracking web application where 
   async clearChatHistory(userId: string, sessionId?: string): Promise<void> {
     if (sessionId) {
       // Clear specific session
-      await this.chatMessageRepository.delete({ userId, sessionId });
+      await this.chatMessageModel.deleteMany({ userId, sessionId }).exec();
     } else {
       // Clear all sessions for user
-      await this.chatMessageRepository.delete({ userId });
+      await this.chatMessageModel.deleteMany({ userId }).exec();
     }
   }
 

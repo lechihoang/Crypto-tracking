@@ -1,12 +1,17 @@
 import { Module } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { MongooseModule } from "@nestjs/mongoose";
 import { ChatbotController } from "./chatbot.controller";
 import { ChatbotService } from "./chatbot.service";
 import { RagModule } from "../rag/rag.module";
-import { ChatMessage } from "../entities";
+import { ChatMessage, ChatMessageSchema } from "../schemas";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ChatMessage]), RagModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: ChatMessage.name, schema: ChatMessageSchema },
+    ]),
+    RagModule,
+  ],
   controllers: [ChatbotController],
   providers: [ChatbotService],
 })

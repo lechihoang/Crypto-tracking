@@ -1,33 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import dynamic from 'next/dynamic';
+import { useAuth } from '@/contexts/AuthContext';
 import { portfolioApi } from '@/lib/api';
+import { HoldingWithValue } from '@/types/common';
+import { PortfolioHolding } from '@/types/portfolio';
 import AddCoinBar from '@/components/AddCoinBar';
 import PortfolioChart from '@/components/PortfolioChart';
 import PortfolioPieChart from '@/components/PortfolioPieChart';
-import EditHoldingModal from '@/components/EditHoldingModal';
-import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Loader, PieChart, Edit2, Trash2, Target, X, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface PortfolioHolding {
-  id: string;
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  quantity: number;
-  averageBuyPrice?: number;
-  notes?: string;
-  createdAt: string;
-}
+// Lazy load modals
+const EditHoldingModal = dynamic(() => import('@/components/EditHoldingModal'), {
+  ssr: false,
+});
 
-interface HoldingWithValue extends PortfolioHolding {
-  currentPrice: number;
-  currentValue: number;
-  profitLoss?: number;
-  profitLossPercentage?: number;
-}
+const DeleteConfirmModal = dynamic(() => import('@/components/DeleteConfirmModal'), {
+  ssr: false,
+});
 
 interface BenchmarkData {
   benchmark: {
@@ -96,7 +89,9 @@ export default function PortfolioPage() {
         setTotalValue(portfolioData.totalValue || 0);
         setHoldings(portfolioData.holdings?.map((h) => ({
           ...h.holding,
+          id: h.holding.id || '', // Map MongoDB _id to id
           currentPrice: h.currentPrice,
+          value: h.currentValue, // Map to common type field name
           currentValue: h.currentValue,
           profitLoss: h.profitLoss,
           profitLossPercentage: h.profitLossPercentage,
@@ -115,11 +110,14 @@ export default function PortfolioPage() {
   const fetchBenchmarkData = async () => {
     try {
       const result = await portfolioApi.getBenchmark();
-      if (result.data) {
-        setBenchmarkData(result.data as BenchmarkData);
+      if (result.data && typeof result.data === 'object' && !Array.isArray(result.data)) {
+        const bData = result.data as Partial<BenchmarkData>;
+        if ('benchmark' in bData || 'currentValue' in bData) {
+          setBenchmarkData(bData as BenchmarkData);
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch benchmark data:', error);
+    } catch {
+      // Silent fail for benchmark data
     }
   };
 
@@ -136,25 +134,13 @@ export default function PortfolioPage() {
         // Hide benchmark warning after updating
         setShowBenchmarkWarning(false);
       }
-    } catch (error) {
+    } catch {
       setError('Không thể đặt mốc');
     } finally {
       setSettingBenchmark(false);
     }
   };
 
-  const handleDeleteBenchmark = async () => {
-    try {
-      const result = await portfolioApi.deleteBenchmark();
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setBenchmarkData(null);
-      }
-    } catch (error) {
-      setError('Không thể xóa mốc');
-    }
-  };
 
   const formatCurrency = (amount: number, showFullDecimals = false) => {
     return new Intl.NumberFormat('en-US', {
@@ -199,13 +185,13 @@ export default function PortfolioPage() {
           (typeof updatedResult.data === 'object' && 'holdings' in updatedResult.data &&
            (!updatedResult.data.holdings || updatedResult.data.holdings.length === 0));
 
-        // If portfolio is empty, reset benchmark to 0
+        // If portfolio is empty, delete the benchmark completely
         if (isEmpty && benchmarkData?.benchmark) {
           try {
-            await portfolioApi.setBenchmark(0);
+            await portfolioApi.deleteBenchmark();
             await fetchBenchmarkData();
           } catch (error) {
-            console.log('Failed to reset benchmark:', error);
+            console.log('Failed to delete benchmark:', error);
           }
         } else if (benchmarkData?.benchmark) {
           setShowBenchmarkWarning(true);
@@ -230,13 +216,7 @@ export default function PortfolioPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex items-center justify-center h-64">
-          <Loader className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen size="lg" />;
   }
 
   if (!user) {
@@ -249,12 +229,9 @@ export default function PortfolioPage() {
     );
   }
 
-  const totalProfitLoss = holdings.reduce((sum, holding) => sum + (Number(holding.profitLoss) || 0), 0);
-  const totalInvestment = Number(totalValue) - totalProfitLoss;
-  const totalProfitLossPercentage = totalInvestment > 0 ? (totalProfitLoss / totalInvestment) * 100 : 0;
-
   // Calculate real-time benchmark data based on current totalValue
-  const realtimeBenchmarkData = benchmarkData?.benchmark ? {
+  // Don't show benchmark if portfolio is empty
+  const realtimeBenchmarkData = benchmarkData?.benchmark && holdings.length > 0 ? {
     benchmark: benchmarkData.benchmark,
     currentValue: totalValue,
     profitLoss: totalValue - benchmarkData.benchmark.value,
@@ -282,10 +259,30 @@ export default function PortfolioPage() {
         </div>
 
         {/* Add Coin Bar */}
-        <AddCoinBar onSuccess={() => {
-          fetchPortfolioData();
-          // Show benchmark warning if benchmark exists
-          if (benchmarkData?.benchmark) {
+        <AddCoinBar onSuccess={async () => {
+          const hadNoHoldings = holdings.length === 0;
+          await fetchPortfolioData();
+
+          // If this was the first coin added and no benchmark exists, auto-set it
+          if (hadNoHoldings && !benchmarkData?.benchmark) {
+            // Wait a bit for portfolio data to be updated
+            setTimeout(async () => {
+              const result = await portfolioApi.getPortfolioValue();
+              if (result.data && typeof result.data === 'object' && 'totalValue' in result.data) {
+                const newTotalValue = result.data.totalValue;
+                if (newTotalValue > 0) {
+                  try {
+                    await portfolioApi.setBenchmark(newTotalValue);
+                    await fetchBenchmarkData();
+                    toast.success('Đã tự động đặt mốc đầu tư với giá trị hiện tại');
+                  } catch (error) {
+                    console.error('Failed to auto-set benchmark:', error);
+                  }
+                }
+              }
+            }, 500);
+          } else if (benchmarkData?.benchmark) {
+            // Show benchmark warning if benchmark exists
             setShowBenchmarkWarning(true);
           }
         }} />
@@ -408,22 +405,33 @@ export default function PortfolioPage() {
             ) : (
               <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100">
                 <Flag className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600 mb-2">Chưa đặt mốc đầu tư</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Đặt giá trị hiện tại làm mốc để theo dõi lãi/lỗ từ thời điểm này
-                </p>
-                <button
-                  onClick={handleSetBenchmark}
-                  disabled={settingBenchmark || !totalValue}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
-                >
-                  {settingBenchmark ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Flag size={16} />
-                  )}
-                  Đặt giá hiện tại làm mốc
-                </button>
+                {holdings.length === 0 ? (
+                  <>
+                    <p className="text-gray-600 mb-2">Chưa có đồng tiền nào</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Hãy thêm đồng tiền vào danh mục để bắt đầu theo dõi lãi/lỗ
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-2">Chưa đặt mốc đầu tư</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Đặt giá trị hiện tại làm mốc để theo dõi lãi/lỗ từ thời điểm này
+                    </p>
+                    <button
+                      onClick={handleSetBenchmark}
+                      disabled={settingBenchmark || !totalValue}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                      {settingBenchmark ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Flag size={16} />
+                      )}
+                      Đặt giá hiện tại làm mốc
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

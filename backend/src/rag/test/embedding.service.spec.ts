@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { EmbeddingService } from "../embedding.service";
@@ -8,7 +11,6 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe("EmbeddingService", () => {
   let service: EmbeddingService;
-  let configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -29,7 +31,6 @@ describe("EmbeddingService", () => {
     }).compile();
 
     service = module.get<EmbeddingService>(EmbeddingService);
-    configService = module.get<ConfigService>(ConfigService);
     jest.clearAllMocks();
   });
 
@@ -55,7 +56,7 @@ describe("EmbeddingService", () => {
       expect(result).toEqual(mockEmbedding);
       expect(result.length).toBe(384);
       expect(mockedAxios.post).toHaveBeenCalledWith(
-        "https://api-inference.huggingface.co/models/BAAI/bge-small-en-v1.5",
+        "https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-v1.5",
         expect.objectContaining({
           inputs: expect.any(String),
           options: expect.objectContaining({
@@ -141,8 +142,12 @@ describe("EmbeddingService", () => {
       // Helper function to calculate cosine similarity
       const cosineSimilarity = (a: number[], b: number[]): number => {
         const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-        const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-        const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+        const magnitudeA = Math.sqrt(
+          a.reduce((sum, val) => sum + val * val, 0),
+        );
+        const magnitudeB = Math.sqrt(
+          b.reduce((sum, val) => sum + val * val, 0),
+        );
         return dotProduct / (magnitudeA * magnitudeB);
       };
 

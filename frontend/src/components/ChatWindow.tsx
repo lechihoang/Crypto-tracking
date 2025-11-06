@@ -3,25 +3,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, MessageSquarePlus } from 'lucide-react';
 import axios from 'axios';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
+import { ChatMessage } from '@/types';
 
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-}
-
-const INITIAL_MESSAGE: Message = {
+const INITIAL_MESSAGE: ChatMessage = {
   id: '1',
+  userId: null,
+  sessionId: 'initial',
   content: 'Xin chào! Tôi là trợ lý crypto của bạn. Tôi có thể giúp bạn trả lời các câu hỏi về tiền điện tử, phân tích thị trường, mẹo giao dịch và nhiều hơn nữa. Bạn muốn biết điều gì?',
-  sender: 'bot',
-  timestamp: new Date(),
+  role: 'assistant',
+  timestamp: new Date().toISOString(),
 };
 
 export default function ChatWindow() {
   const { user, loading: authLoading } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
@@ -50,12 +46,14 @@ export default function ChatWindow() {
 
           if (response.data.messages && response.data.messages.length > 0) {
             const loadedMessages = response.data.messages
-              .filter((msg: { sender: string; id: string; content: string; timestamp: string }) => msg.sender !== 'system') // Don't show system messages
-              .map((msg: { sender: 'user' | 'bot'; id: string; content: string; timestamp: string }) => ({
+              .filter((msg: { role: string; id: string; content: string; timestamp: string }) => msg.role !== 'system') // Don't show system messages
+              .map((msg: { role: 'user' | 'assistant'; id: string; content: string; timestamp: string; userId?: string; sessionId?: string }) => ({
                 id: msg.id,
+                userId: msg.userId || null,
+                sessionId: msg.sessionId || response.data.sessionId || 'loaded',
                 content: msg.content,
-                sender: msg.sender,
-                timestamp: new Date(msg.timestamp),
+                role: msg.role,
+                timestamp: msg.timestamp,
               }));
 
             if (loadedMessages.length > 0) {
@@ -91,11 +89,13 @@ export default function ChatWindow() {
 
     if (!inputMessage.trim() || isLoading) return;
 
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
+      userId: user?.id || null,
+      sessionId: sessionId || 'new',
       content: inputMessage.trim(),
-      sender: 'user',
-      timestamp: new Date(),
+      role: 'user',
+      timestamp: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -119,11 +119,13 @@ export default function ChatWindow() {
 
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chatbot/chat`, requestBody);
 
-      const botMessage: Message = {
+      const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
+        userId: null,
+        sessionId: response.data.sessionId || sessionId || 'new',
         content: response.data.message,
-        sender: 'bot',
-        timestamp: new Date(response.data.timestamp),
+        role: 'assistant',
+        timestamp: response.data.timestamp,
       };
 
       setMessages(prev => [...prev, botMessage]);
@@ -142,11 +144,13 @@ export default function ChatWindow() {
     } catch (error) {
       console.error('Chat error:', error);
 
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
+        userId: null,
+        sessionId: sessionId || 'error',
         content: 'Sorry, I encountered an error. Please try again later or make sure you have set up your Groq API key.',
-        sender: 'bot',
-        timestamp: new Date(),
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
       };
 
       setMessages(prev => [...prev, errorMessage]);
@@ -212,28 +216,28 @@ export default function ChatWindow() {
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`flex gap-2 max-w-[80%] ${
-                message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
+                message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
               }`}
             >
               {/* Avatar */}
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.sender === 'user'
+                  message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-600 text-white'
                 }`}
               >
-                {message.sender === 'user' ? <User size={16} /> : <Bot size={16} />}
+                {message.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
 
-              {/* Message Bubble */}
+              {/* ChatMessage Bubble */}
               <div
                 className={`rounded-lg px-3 py-2 ${
-                  message.sender === 'user'
+                  message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-800 border border-gray-200'
                 }`}
@@ -246,10 +250,10 @@ export default function ChatWindow() {
                 />
                 <div
                   className={`text-xs mt-1 opacity-70 ${
-                    message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}
                 >
-                  {message.timestamp.toLocaleTimeString([], {
+                  {new Date(message.timestamp).toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}

@@ -8,12 +8,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ComparePage() {
   const [cryptos, setCryptos] = useState<CryptoCurrency[]>([]);
-  const [allCryptos, setAllCryptos] = useState<CryptoCurrency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize] = useState(50);
   const [totalCoins, setTotalCoins] = useState(0);
 
   const fetchCryptos = async (page: number = currentPage, size: number = pageSize) => {
@@ -26,15 +25,6 @@ export default function ComparePage() {
       const data = await clientApi.getLatestListings(size, page);
 
       setCryptos(data.data);
-      // For search functionality, we keep fetching all pages up to current
-      if (page === 1) {
-        setAllCryptos(data.data);
-      } else {
-        setAllCryptos(prev => {
-          const existing = prev.slice(0, (page - 1) * size);
-          return [...existing, ...data.data];
-        });
-      }
 
       // CoinGecko has 10,000+ coins, but we'll limit to 5000 for practical purposes
       setTotalCoins(5000);
@@ -52,29 +42,15 @@ export default function ComparePage() {
     const interval = setInterval(() => fetchCryptos(), 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize]);
-
-  const handleCoinClick = (coinId: number) => {
-    // Find the coin with this ID and use its slug instead
-    const coin = allCryptos.find(c => c.id === coinId);
-    if (coin && coin.slug) {
-      window.location.href = `/coin/${coin.slug}`;
-    }
-  };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    setCurrentPage(1); // Reset to first page
-  };
-
   const totalPages = Math.ceil(totalCoins / pageSize);
-  const startIndex = (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, totalCoins);
 
   return (
     <div className="bg-gray-50 min-h-full pb-8">
@@ -118,7 +94,7 @@ export default function ComparePage() {
               const pages = [];
               const maxVisible = 7;
               let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-              let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+              const endPage = Math.min(totalPages, startPage + maxVisible - 1);
 
               if (endPage - startPage < maxVisible - 1) {
                 startPage = Math.max(1, endPage - maxVisible + 1);

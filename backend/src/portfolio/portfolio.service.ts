@@ -3,13 +3,11 @@ import {
   NotFoundException,
   ConflictException,
 } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import {
-  PortfolioHolding,
-  PortfolioSnapshot,
-  PortfolioBenchmark,
-} from "../entities";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { PortfolioHolding } from "../schemas/portfolio-holding.schema";
+import { PortfolioSnapshot } from "../schemas/portfolio-snapshot.schema";
+import { User } from "../schemas/user.schema";
 import { CryptoService } from "../crypto/crypto.service";
 import { CreateHoldingDto } from "./dto/create-holding.dto";
 import { UpdateHoldingDto } from "./dto/update-holding.dto";
@@ -17,69 +15,68 @@ import { UpdateHoldingDto } from "./dto/update-holding.dto";
 @Injectable()
 export class PortfolioService {
   constructor(
-    @InjectRepository(PortfolioHolding)
-    private holdingRepository: Repository<PortfolioHolding>,
-    @InjectRepository(PortfolioSnapshot)
-    private snapshotRepository: Repository<PortfolioSnapshot>,
-    @InjectRepository(PortfolioBenchmark)
-    private benchmarkRepository: Repository<PortfolioBenchmark>,
-    private cryptoService: CryptoService,
+    @InjectModel(PortfolioHolding.name)
+    private holdingModel: Model<PortfolioHolding>,
+    @InjectModel(PortfolioSnapshot.name)
+    private snapshotModel: Model<PortfolioSnapshot>,
+    @InjectModel(User.name)
+    private userModel: Model<User>,
+    private cryptoService: CryptoService
   ) {}
 
   async getHoldings(userId: string): Promise<PortfolioHolding[]> {
-    return this.holdingRepository.find({
-      where: { userId },
-      order: { createdAt: "DESC" },
-    });
+    return this.holdingModel.find({ userId }).sort({ createdAt: -1 }).exec();
   }
 
   async addHolding(
     userId: string,
-    createHoldingDto: CreateHoldingDto,
+    createHoldingDto: CreateHoldingDto
   ): Promise<PortfolioHolding> {
     // Check if holding already exists
-    const existingHolding = await this.holdingRepository.findOne({
-      where: { userId, coinId: createHoldingDto.coinId },
-    });
+    const existingHolding = await this.holdingModel
+      .findOne({ userId, coinId: createHoldingDto.coinId })
+      .exec();
 
     if (existingHolding) {
       throw new ConflictException(
-        "Holding for this coin already exists. Use update instead.",
+        "Holding for this coin already exists. Use update instead."
       );
     }
 
-    const holding = this.holdingRepository.create({
+    const holding = new this.holdingModel({
       userId,
       ...createHoldingDto,
     });
 
-    return this.holdingRepository.save(holding);
+    return holding.save();
   }
 
   async updateHolding(
     userId: string,
     holdingId: string,
-    updateHoldingDto: UpdateHoldingDto,
+    updateHoldingDto: UpdateHoldingDto
   ): Promise<PortfolioHolding> {
-    const holding = await this.holdingRepository.findOne({
-      where: { id: holdingId, userId },
-    });
+    const holding = await this.holdingModel
+      .findOne({ _id: holdingId, userId })
+      .exec();
 
     if (!holding) {
       throw new NotFoundException("Holding not found");
     }
 
     Object.assign(holding, updateHoldingDto);
-    return this.holdingRepository.save(holding);
+    return holding.save();
   }
 
   async removeHolding(userId: string, holdingId: string): Promise<void> {
-    const result = await this.holdingRepository.delete({
-      id: holdingId,
-      userId,
-    });
+    const result = await this.holdingModel
+      .deleteOne({
+        _id: holdingId,
+        userId,
+      })
+      .exec();
 
-    if (result.affected === 0) {
+    if (result.deletedCount === 0) {
       throw new NotFoundException("Holding not found");
     }
   }
@@ -136,35 +133,34 @@ export class PortfolioService {
 
   async createSnapshot(
     userId: string,
-    totalValue: number,
+    totalValue: number
   ): Promise<PortfolioSnapshot> {
-    const snapshot = this.snapshotRepository.create({
+    const snapshot = new this.snapshotModel({
       userId,
       totalValue,
     });
 
-    return this.snapshotRepository.save(snapshot);
+    return snapshot.save();
   }
 
   async getPortfolioHistory(
     userId: string,
-    days: number = 30,
+    days: number = 30
   ): Promise<PortfolioSnapshot[]> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    return this.snapshotRepository
-      .createQueryBuilder("snapshot")
-      .where("snapshot.userId = :userId", { userId })
-      .andWhere("snapshot.snapshotDate >= :startDate", { startDate })
-      .orderBy("snapshot.snapshotDate", "ASC")
-      .getMany();
+    return this.snapshotModel
+      .find({
+        userId,
+        snapshotDate: { $gte: startDate },
+      })
+      .sort({ snapshotDate: 1 })
+      .exec();
   }
 
   async getPortfolioValueHistory(userId: string, days: number = 30) {
-    const holdings = await this.holdingRepository.find({
-      where: { userId },
-    });
+    const holdings = await this.holdingModel.find({ userId }).exec();
 
     if (holdings.length === 0) {
       return { data: [] };
@@ -176,16 +172,19 @@ export class PortfolioService {
       const uniqueCoinIds = [...new Set(coinIds)];
 
       // Fetch price history for all coins with delays to respect rate limits
-      const priceHistories: Array<{ coinId: string; prices: any[] }> = [];
+      const priceHistories: Array<{
+        coinId: string;
+        prices: Array<{ timestamp: number; price: number }>;
+      }> = [];
 
       for (const coinId of uniqueCoinIds) {
         try {
           const response = await this.cryptoService.getCoinPriceHistory(
             coinId,
-            days,
+            days
           );
           priceHistories.push({ coinId, prices: response.prices });
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`Failed to fetch price history for ${coinId}:`, error);
           priceHistories.push({ coinId, prices: [] });
         }
@@ -200,7 +199,7 @@ export class PortfolioService {
       const priceMap = new Map<string, Map<number, number>>();
       priceHistories.forEach(({ coinId, prices }) => {
         const coinPriceMap = new Map<number, number>();
-        prices.forEach((priceData: any) => {
+        prices.forEach((priceData) => {
           coinPriceMap.set(priceData.timestamp, priceData.price);
         });
         priceMap.set(coinId, coinPriceMap);
@@ -209,7 +208,7 @@ export class PortfolioService {
       // Get all unique timestamps and sort them
       const allTimestamps = new Set<number>();
       priceHistories.forEach(({ prices }) => {
-        prices.forEach((priceData: any) => {
+        prices.forEach((priceData) => {
           allTimestamps.add(priceData.timestamp);
         });
       });
@@ -247,40 +246,57 @@ export class PortfolioService {
       });
 
       return { data: portfolioHistory };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error calculating portfolio value history:", error);
       return { data: [] };
     }
   }
 
-  async setBenchmark(userId: string, benchmarkValue: number): Promise<PortfolioBenchmark> {
-    // Check if benchmark already exists
-    let benchmark = await this.benchmarkRepository.findOne({
-      where: { userId },
-    });
+  async setBenchmark(
+  userId: string,
+  benchmarkValue: number,
+): Promise<{ userId: string; benchmarkValue: number }> {
+  // Update benchmarkValue in User document
+  const user = await this.userModel.findOneAndUpdate(
+    { userId },
+    { benchmarkValue },
+    { new: true, upsert: true }
+  ).exec();
 
-    if (benchmark) {
-      // Update existing benchmark
-      benchmark.benchmarkValue = benchmarkValue;
-      benchmark.updatedAt = new Date();
-    } else {
-      // Create new benchmark
-      benchmark = this.benchmarkRepository.create({
-        userId,
-        benchmarkValue,
-      });
-    }
-
-    return this.benchmarkRepository.save(benchmark);
+  if (!user) {
+    throw new NotFoundException('User not found');
   }
 
-  async getBenchmark(userId: string): Promise<PortfolioBenchmark | null> {
-    return this.benchmarkRepository.findOne({
-      where: { userId },
-    });
+  return {
+    userId: user.userId,
+    benchmarkValue: user.benchmarkValue,
+  };
+}
+
+  async getBenchmark(userId: string): Promise<{ userId: string; benchmarkValue: number; updatedAt: Date } | null> {
+  const user = await this.userModel.findOne({ userId }).exec();
+
+  if (!user) {
+    return null;
   }
 
-  async deleteBenchmark(userId: string): Promise<void> {
-    await this.benchmarkRepository.delete({ userId });
+  return {
+    userId: user.userId,
+    benchmarkValue: user.benchmarkValue,
+    updatedAt: (user as any).updatedAt,
+  };
+}
+
+async deleteBenchmark(userId: string): Promise<void> {
+  // Set benchmarkValue back to 0 instead of deleting
+  const user = await this.userModel.findOneAndUpdate(
+    { userId },
+    { benchmarkValue: 0 },
+    { new: true }
+  ).exec();
+
+  if (!user) {
+    throw new NotFoundException('User not found');
   }
+}
 }

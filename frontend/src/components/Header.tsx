@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { BarChart3, User, LogOut, Menu, X, Settings, Wallet, Bell } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function Header() {
   const { user, signOut } = useAuth();
@@ -69,26 +70,31 @@ export default function Header() {
           </nav>
 
           {/* Auth Section */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
             {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {user.full_name || user.email?.split('@')[0]}
-                  </span>
-                </button>
+              <>
+                {/* Notification Bell */}
+                <NotificationDropdown />
+
+                {/* User Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {user.name || user.email?.split('@')[0]}
+                    </span>
+                  </button>
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     <div className="px-4 py-2 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900">
-                        {user.full_name || 'User'}
+                        {user.name || 'User'}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
@@ -140,7 +146,8 @@ export default function Header() {
                     </button>
                   </div>
                 )}
-              </div>
+                </div>
+              </>
             ) : (
               <div className="flex items-center gap-3">
                 <Link
@@ -215,7 +222,7 @@ export default function Header() {
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="px-4 py-2">
                       <p className="text-sm font-medium text-gray-900">
-                        {user.full_name || 'User'}
+                        {user.name || 'User'}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>

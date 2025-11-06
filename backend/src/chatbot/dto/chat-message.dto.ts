@@ -1,14 +1,15 @@
-import { z } from "zod";
+import { IsString, IsOptional, MinLength, MaxLength } from "class-validator";
 
-export const SendMessageDto = z.object({
-  message: z
-    .string()
-    .min(1, "Message cannot be empty")
-    .max(1000, "Message too long"),
-  sessionId: z.string().optional(),
-});
+export class SendMessageDto {
+  @IsString()
+  @MinLength(1, { message: "Message cannot be empty" })
+  @MaxLength(1000, { message: "Message too long" })
+  message: string;
 
-export type SendMessageDto = z.infer<typeof SendMessageDto>;
+  @IsOptional()
+  @IsString()
+  sessionId?: string;
+}
 
 export interface ChatResponse {
   message: string;

@@ -5,19 +5,7 @@ import { X, Loader } from 'lucide-react';
 import { portfolioApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-interface HoldingWithValue {
-  id: string;
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  quantity: number;
-  averageBuyPrice?: number;
-  notes?: string;
-  currentPrice: number;
-  currentValue: number;
-  profitLoss?: number;
-  profitLossPercentage?: number;
-}
+import { HoldingWithValue } from '@/types';
 
 interface EditHoldingModalProps {
   isOpen: boolean;
@@ -27,7 +15,7 @@ interface EditHoldingModalProps {
   hasBenchmark?: boolean;
 }
 
-export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess, hasBenchmark }: EditHoldingModalProps) {
+export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }: EditHoldingModalProps) {
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
 

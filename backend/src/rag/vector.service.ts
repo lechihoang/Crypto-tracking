@@ -15,6 +15,13 @@ export interface SearchResult extends VectorDocument {
   score: number;
 }
 
+export interface IndexStats {
+  totalVectorCount: number;
+  dimension?: number;
+  indexFullness?: number;
+  namespaces?: Record<string, { recordCount: number }>;
+}
+
 @Injectable()
 export class VectorService {
   private pinecone: Pinecone;
@@ -60,7 +67,7 @@ export class VectorService {
 
         console.log("Pinecone index created successfully");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error initializing Pinecone index:", error);
     }
   }
@@ -101,7 +108,7 @@ export class VectorService {
         await index.upsert(vectors);
         console.log(`Upserted batch ${Math.floor(i / batchSize) + 1}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error upserting documents to Pinecone:", error);
       throw error;
     }
@@ -146,7 +153,7 @@ export class VectorService {
       }
 
       return results;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error searching Pinecone:", error);
       return [];
     }
@@ -169,12 +176,12 @@ export class VectorService {
       });
 
       console.log(`Cleaned up documents older than ${daysOld} days`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error cleaning up old documents:", error);
     }
   }
 
-  async getIndexStats(): Promise<any> {
+  async getIndexStats(): Promise<IndexStats | null> {
     try {
       if (!this.pinecone) return null;
 
@@ -187,7 +194,7 @@ export class VectorService {
         indexFullness: stats.indexFullness,
         namespaces: stats.namespaces,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error getting index stats:", error);
       return null;
     }
@@ -212,7 +219,7 @@ export class VectorService {
       } else {
         console.log("Index does not exist");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error deleting Pinecone index:", error);
       throw error;
     }
@@ -229,7 +236,7 @@ export class VectorService {
       console.log(`Deleting all vectors from index: ${this.indexName}...`);
       await index.deleteAll();
       console.log("All vectors deleted successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error deleting all vectors:", error);
       throw error;
     }

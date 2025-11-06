@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { TrendingUp, TrendingDown, Minus, Plus, Wrench, Trash2 } from 'lucide-react';
 import { CryptoCurrency } from '@/types/crypto';
-import PriceAlertModal from './PriceAlertModal';
 import { alertsApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const PercentageChange = ({ change }: { change: number }) => {
+// Lazy load PriceAlertModal
+const PriceAlertModal = dynamic(() => import('./PriceAlertModal'), {
+  ssr: false,
+});
+
+// Memoized PercentageChange component
+const PercentageChange = React.memo(({ change }: { change: number }) => {
   const isPositive = change > 0;
   const isZero = Math.abs(change) < 0.01;
 
@@ -24,7 +31,9 @@ const PercentageChange = ({ change }: { change: number }) => {
       <span>{Math.abs(change).toFixed(2)}%</span>
     </div>
   );
-};
+});
+
+PercentageChange.displayName = 'PercentageChange';
 
 // Format functions for full precision display
 const formatPrice = (price: number) => {
@@ -57,8 +66,8 @@ const formatVolume = (value: number) => {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-// Mini sparkline chart component
-const MiniSparkline = ({ data, changePercent }: { data?: number[], changePercent: number }) => {
+// Memoized Mini sparkline chart component
+const MiniSparkline = React.memo(({ data, changePercent }: { data?: number[], changePercent: number }) => {
   if (!data || data.length === 0) {
     return <div className="w-36 h-12 flex items-center justify-center text-gray-400 text-xs">N/A</div>;
   }
@@ -89,7 +98,9 @@ const MiniSparkline = ({ data, changePercent }: { data?: number[], changePercent
       />
     </svg>
   );
-};
+});
+
+MiniSparkline.displayName = 'MiniSparkline';
 
 interface CryptoTableProps {
   cryptos: CryptoCurrency[];
@@ -98,14 +109,13 @@ interface CryptoTableProps {
   onRetry?: () => void;
 }
 
-export default function CryptoTable({ cryptos, loading, error, onRetry }: CryptoTableProps) {
+const CryptoTable = React.memo(function CryptoTable({ cryptos, loading, error, onRetry }: CryptoTableProps) {
   const { user } = useAuth();
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
-    coinId: number;
+    coinId: string;
     coinSymbol: string;
     coinName: string;
-    coinImage?: string;
     currentPrice: number;
     existingAlert?: {
       id: string;
@@ -114,24 +124,20 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
     };
   }>({
     isOpen: false,
-    coinId: 0,
+    coinId: '',
     coinSymbol: '',
     coinName: '',
-    coinImage: undefined,
     currentPrice: 0
   });
   interface AlertData {
     id: string;
-    coinId: number;
-    coinSymbol: string;
-    coinName: string;
+    coinId: string;
     condition: 'above' | 'below';
     targetPrice: number;
     isActive: boolean;
   }
 
   const [userAlerts, setUserAlerts] = useState<AlertData[]>([]);
-  const [loadingAlerts, setLoadingAlerts] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -140,17 +146,14 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
   }, [user]);
 
   const fetchUserAlerts = async () => {
-    setLoadingAlerts(true);
     try {
       const result = await alertsApi.getAlerts();
       console.log('[CryptoTable] Alerts result:', result);
       if (result.data) {
-        // Backend already returns camelCase
+        // Backend returns alerts with coinId (string format)
         const transformedAlerts = result.data.map(alert => ({
           id: alert.id,
           coinId: alert.coinId,
-          coinSymbol: alert.coinSymbol,
-          coinName: alert.coinName,
           condition: alert.condition,
           targetPrice: alert.targetPrice,
           isActive: alert.isActive
@@ -160,19 +163,16 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
       }
     } catch (error) {
       console.error('Failed to fetch alerts:', error);
-    } finally {
-      setLoadingAlerts(false);
     }
   };
 
   const openAlertModal = (crypto: CryptoCurrency, existingAlert?: AlertData) => {
     setAlertModal({
       isOpen: true,
-      coinId: crypto.id,
+      coinId: crypto.slug || String(crypto.id), // Use slug as coinId (compatible with CoinGecko format)
       coinSymbol: crypto.symbol,
       coinName: crypto.name,
-      coinImage: crypto.image,
-      currentPrice: crypto.quote.USD.price,
+      currentPrice: crypto.quote?.USD.price || 0,
       existingAlert: existingAlert ? {
         id: existingAlert.id,
         condition: existingAlert.condition,
@@ -211,8 +211,8 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
     }
   };
 
-  const getAlertForCoin = (coinId: number) => {
-    return userAlerts.find(alert => alert.coinId === coinId && alert.isActive);
+  const getAlertForCoin = (coinSlug: string) => {
+    return userAlerts.find(alert => alert.coinId === coinSlug && alert.isActive);
   };
   if (loading) {
     return (
@@ -284,15 +284,16 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
               </td>
               <td className="px-3 py-4">
                 <Link href={`/coin/${crypto.slug}`} className="flex items-center gap-2 hover:text-blue-600 transition-colors duration-200">
-                  <img
-                    src={crypto.image || `https://s2.coinmarketcap.com/static/img/coins/64x64/${crypto.id}.png`}
-                    alt={crypto.name}
-                    className="w-7 h-7 rounded-full flex-shrink-0"
-                    onError={(e) => {
-                      // Fallback to a generic icon if the image fails to load
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"%3E%3Ccircle cx="14" cy="14" r="14" fill="%23e5e7eb"/%3E%3Ctext x="14" y="18" text-anchor="middle" font-size="12" font-weight="bold" fill="%236b7280"%3E' + crypto.symbol.charAt(0) + '%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
+                  <div className="relative w-7 h-7 flex-shrink-0">
+                    <Image
+                      src={crypto.image || `https://s2.coinmarketcap.com/static/img/coins/64x64/${crypto.id}.png`}
+                      alt={crypto.name}
+                      width={28}
+                      height={28}
+                      className="rounded-full"
+                      unoptimized
+                    />
+                  </div>
                   <div className="overflow-hidden">
                     <div className="text-base font-semibold text-gray-900 truncate" title={crypto.name}>
                       {crypto.name}
@@ -304,33 +305,33 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
                 </Link>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-base font-bold text-gray-900">
-                {formatPrice(crypto.quote.USD.price)}
+                {formatPrice(crypto.quote?.USD.price || 0)}
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote.USD.percent_change_1h} />
+                <PercentageChange change={crypto.quote?.USD.percent_change_1h || 0} />
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote.USD.percent_change_24h} />
+                <PercentageChange change={crypto.quote?.USD.percent_change_24h || 0} />
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote.USD.percent_change_7d} />
+                <PercentageChange change={crypto.quote?.USD.percent_change_7d || 0} />
               </td>
               <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {formatMarketCap(crypto.quote.USD.market_cap)}
+                {formatMarketCap(crypto.quote?.USD.market_cap || 0)}
               </td>
               <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {formatVolume(crypto.quote.USD.volume_24h)}
+                {formatVolume(crypto.quote?.USD.volume_24h || 0)}
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-sm">
                 <MiniSparkline
                   data={crypto.sparkline_in_7d?.price}
-                  changePercent={crypto.quote.USD.percent_change_7d}
+                  changePercent={crypto.quote?.USD.percent_change_7d || 0}
                 />
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-sm">
                 {user ? (
                   (() => {
-                    const existingAlert = getAlertForCoin(crypto.id);
+                    const existingAlert = getAlertForCoin(crypto.slug || crypto.id);
                     return existingAlert ? (
                       <div className="flex items-center gap-2">
                         <button
@@ -391,10 +392,13 @@ export default function CryptoTable({ cryptos, loading, error, onRetry }: Crypto
         coinId={alertModal.coinId}
         coinSymbol={alertModal.coinSymbol}
         coinName={alertModal.coinName}
-        coinImage={alertModal.coinImage}
         currentPrice={alertModal.currentPrice}
         existingAlert={alertModal.existingAlert}
       />
     </div>
   );
-}
+});
+
+CryptoTable.displayName = 'CryptoTable';
+
+export default CryptoTable;

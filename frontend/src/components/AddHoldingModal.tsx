@@ -5,18 +5,12 @@ import { X } from 'lucide-react';
 import { portfolioApi, clientApi } from '@/lib/api';
 import CoinSelector from '@/components/CoinSelector';
 import AddHoldingForm from '@/components/AddHoldingForm';
+import { Coin } from '@/types';
 
 interface AddHoldingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-}
-
-interface Coin {
-  id: number;
-  name: string;
-  symbol: string;
-  slug: string;
 }
 
 export default function AddHoldingModal({ isOpen, onClose, onSuccess }: AddHoldingModalProps) {
@@ -40,15 +34,14 @@ export default function AddHoldingModal({ isOpen, onClose, onSuccess }: AddHoldi
       const result = await clientApi.getLatestListings(50);
       if (result.data) {
         setCoins(result.data.map((coin: {
-          id: number;
+          id: string;
           name: string;
           symbol: string;
           slug: string;
         }) => ({
-          id: coin.id,
+          id: coin.slug || coin.id,
           name: coin.name,
           symbol: coin.symbol,
-          slug: coin.slug,
         })));
       }
     } catch (error) {
@@ -62,7 +55,7 @@ export default function AddHoldingModal({ isOpen, onClose, onSuccess }: AddHoldi
     setSelectedCoin(coin);
     setFormValues({
       ...formValues,
-      coinId: coin.slug,
+      coinId: coin.id,
       coinSymbol: coin.symbol,
       coinName: coin.name,
     });
@@ -89,12 +82,12 @@ export default function AddHoldingModal({ isOpen, onClose, onSuccess }: AddHoldi
     try {
       const submitData = { ...formValues, ...data };
       const result = await portfolioApi.addHolding({
-        coinId: submitData.coinId,
-        coinSymbol: submitData.coinSymbol,
-        coinName: submitData.coinName,
-        quantity: submitData.quantity,
-        averageBuyPrice: submitData.averageBuyPrice,
-        notes: submitData.notes,
+        coinId: String(submitData.coinId),
+        coinSymbol: String(submitData.coinSymbol),
+        coinName: String(submitData.coinName),
+        quantity: Number(submitData.quantity),
+        averageBuyPrice: submitData.averageBuyPrice ? Number(submitData.averageBuyPrice) : undefined,
+        notes: submitData.notes ? String(submitData.notes) : undefined,
       });
 
       if (result.error) {

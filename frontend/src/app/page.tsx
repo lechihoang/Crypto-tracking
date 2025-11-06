@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { SiBitcoin, SiEthereum, SiLitecoin, SiDogecoin, SiRipple, SiBinance } from 'react-icons/si';
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 
@@ -27,9 +28,11 @@ export default function Home() {
 
           {/* Section 2: 12 cột trên mobile/tablet, 7 cột trên desktop */}
           <section className="col-span-12 xl:col-span-7 bg-white rounded-lg shadow overflow-hidden">
-            <img
+            <Image
               src="/images/dashboard-preview.png"
               alt="Dashboard Preview"
+              width={1200}
+              height={800}
               className="w-full h-auto object-contain"
             />
           </section>
@@ -121,9 +124,11 @@ export default function Home() {
 
           {/* Compare Price Image/Preview: 6 cột trên desktop */}
           <section className="col-span-12 xl:col-span-6 bg-white rounded-lg shadow overflow-hidden">
-            <img
+            <Image
               src="/images/price-alert-preview.png"
               alt="Price Comparison Preview"
+              width={800}
+              height={600}
               className="w-full h-full min-h-[400px] object-cover"
             />
           </section>
@@ -133,9 +138,11 @@ export default function Home() {
         <div className="grid grid-cols-12 gap-4 mt-16">
           {/* Chatbot Image/Preview: 6 cột trên desktop */}
           <section className="col-span-12 xl:col-span-6 bg-white rounded-lg shadow overflow-hidden">
-            <img
+            <Image
               src="/images/chatbot-preview.jpg"
               alt="Chatbot Preview"
+              width={800}
+              height={600}
               className="w-full h-full min-h-[400px] object-cover"
             />
           </section>

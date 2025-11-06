@@ -11,6 +11,9 @@ export class CreateHoldingDto {
   @MinLength(1, { message: "Coin ID is required" })
   coinId: string;
 
+  // Note: coinSymbol, coinName, coinImage are NOT stored in database
+  // They are only used for validation and frontend display
+  // Backend will use coinId to fetch real-time data from CoinGecko API
   @IsString()
   @MinLength(1, { message: "Coin symbol is required" })
   coinSymbol: string;

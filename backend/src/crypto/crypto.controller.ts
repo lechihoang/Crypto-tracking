@@ -1,12 +1,22 @@
 import { Controller, Get, Post, Query, Body, Param } from "@nestjs/common";
-import { CryptoService, CoinData } from "./crypto.service";
+import {
+  CryptoService,
+  CoinData,
+  CoinPrice,
+  SearchResult,
+  PriceHistory,
+  CoinDetails,
+  NewsArticle,
+} from "./crypto.service";
 
 @Controller("crypto")
 export class CryptoController {
   constructor(private readonly cryptoService: CryptoService) {}
 
   @Post("prices")
-  async getCoinPrices(@Body() body: { coinIds: string[] }) {
+  async getCoinPrices(
+    @Body() body: { coinIds: string[] },
+  ): Promise<Record<string, CoinPrice>> {
     return this.cryptoService.getCoinPrices(body.coinIds);
   }
 
@@ -21,18 +31,20 @@ export class CryptoController {
   }
 
   @Get("search")
-  async searchCoins(@Query("q") query: string) {
+  async searchCoins(@Query("q") query: string): Promise<SearchResult[]> {
     return this.cryptoService.searchCoins(query);
   }
 
   @Get("news/latest")
-  async getNews(@Query("limit") limit?: string) {
+  async getNews(@Query("limit") limit?: string): Promise<NewsArticle[]> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
     return this.cryptoService.getNews(limitNum);
   }
 
   @Get("news/vi")
-  async getNewsVietnamese(@Query("limit") limit?: string) {
+  async getNewsVietnamese(
+    @Query("limit") limit?: string,
+  ): Promise<NewsArticle[]> {
     const limitNum = limit ? parseInt(limit, 10) : 10;
     return this.cryptoService.getNewsVietnamese(limitNum);
   }
@@ -41,23 +53,27 @@ export class CryptoController {
   async getCoinPriceHistory(
     @Param("coinId") coinId: string,
     @Query("days") days?: string,
-  ) {
+  ): Promise<PriceHistory> {
     const daysNum = days ? parseInt(days, 10) : 7;
     return this.cryptoService.getCoinPriceHistory(coinId, daysNum);
   }
 
   @Get(":coinId/market")
-  async getCoinMarketData(@Param("coinId") coinId: string) {
+  async getCoinMarketData(
+    @Param("coinId") coinId: string,
+  ): Promise<CoinData | null> {
     return this.cryptoService.getCoinMarketData(coinId);
   }
 
   @Get(":coinId/vi")
-  async getCoinDetailsVietnamese(@Param("coinId") coinId: string) {
+  async getCoinDetailsVietnamese(
+    @Param("coinId") coinId: string,
+  ): Promise<CoinDetails> {
     return this.cryptoService.getCoinDetailsVietnamese(coinId);
   }
 
   @Get(":coinId")
-  async getCoinDetails(@Param("coinId") coinId: string) {
+  async getCoinDetails(@Param("coinId") coinId: string): Promise<CoinDetails> {
     return this.cryptoService.getCoinDetails(coinId);
   }
 }

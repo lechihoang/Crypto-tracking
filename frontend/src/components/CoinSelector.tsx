@@ -2,13 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
-
-interface Coin {
-  id: number;
-  name: string;
-  symbol: string;
-  slug: string;
-}
+import { Coin } from '@/types';
 
 interface CoinSelectorProps {
   coins: Coin[];

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Newspaper, ExternalLink, Clock, Tag, Loader } from 'lucide-react';
-import Link from 'next/link';
+import { ExternalLink, Clock, Tag } from 'lucide-react';
+import Image from 'next/image';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface NewsArticle {
   id: string;
@@ -57,14 +58,7 @@ export default function BlogPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Đang tải tin tức...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen size="lg" text="Đang tải tin tức..." />;
   }
 
   if (error) {
@@ -108,9 +102,11 @@ export default function BlogPage() {
             >
               {/* Image */}
               <div className="relative h-48 bg-gray-200">
-                <img
-                  src={article.imageUrl}
+                <Image
+                  src={article.imageUrl || '/images/placeholder-news.png'}
                   alt={article.title}
+                  width={400}
+                  height={300}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;

@@ -1,8 +1,9 @@
 import { Controller, Get, Post, Query, Body } from "@nestjs/common";
 import { RagService } from "./rag.service";
-import { VectorService, SearchResult } from "./vector.service";
+import { VectorService, SearchResult, IndexStats } from "./vector.service";
 import { EmbeddingService } from "./embedding.service";
 import { ScraperService } from "./scraper.service";
+import { RagSchedulerService } from "./rag-scheduler.service";
 
 @Controller("rag")
 export class RagController {
@@ -11,6 +12,7 @@ export class RagController {
     private vectorService: VectorService,
     private embeddingService: EmbeddingService,
     private scraperService: ScraperService,
+    private ragSchedulerService: RagSchedulerService,
   ) {}
 
   @Get("test/embedding")
@@ -26,40 +28,43 @@ export class RagController {
         embeddingPreview: embedding.slice(0, 5),
         message: "Embedding service is working correctly",
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "Embedding service failed",
       };
     }
   }
 
   @Get("test/pinecone")
-  async testPinecone() {
+  async testPinecone(): Promise<{
+    success: boolean;
+    stats?: IndexStats | null;
+    message: string;
+    error?: string;
+  }> {
     try {
-      const stats = await this.vectorService.getIndexStats();
+      const stats: IndexStats | null = await this.vectorService.getIndexStats();
 
       return {
         success: true,
         stats,
         message: "Pinecone connection is working",
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "Pinecone connection failed",
       };
     }
   }
 
   @Get("test/coingecko")
-  async testCoinGecko(@Query("limit") limit?: string) {
+  async testCoinGecko() {
     try {
-      const content = await this.scraperService.getAllCoinGeckoData(
-        limit ? parseInt(limit) : 10,
-      );
+      const content = await this.scraperService.getAllCoinGeckoData();
 
       return {
         success: true,
@@ -72,17 +77,17 @@ export class RagController {
         })),
         message: "CoinGecko API is working correctly",
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "CoinGecko API failed",
       };
     }
   }
 
   @Post("seed")
-  async seedData(@Body() body: { coinsLimit?: number }) {
+  async seedData() {
     try {
       console.log("Starting data seeding with CoinGecko API...");
 
@@ -90,9 +95,8 @@ export class RagController {
       await this.vectorService.initializeIndex();
 
       // Step 2: Fetch from CoinGecko API
-      const coinsLimit = body.coinsLimit || 100;
-      console.log(`Fetching CoinGecko data (${coinsLimit} coins)...`);
-      const content = await this.scraperService.getAllCoinGeckoData(coinsLimit);
+      console.log(`Fetching CoinGecko data...`);
+      const content = await this.scraperService.getAllCoinGeckoData();
 
       if (content.length === 0) {
         return {
@@ -119,11 +123,11 @@ export class RagController {
         pineconeStats: stats,
         message: `Successfully seeded ${content.length} items to Pinecone`,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Seed error:", error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "Seeding failed",
       };
     }
@@ -145,7 +149,7 @@ export class RagController {
         results,
         count: results.length,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         results: [],
@@ -163,10 +167,10 @@ export class RagController {
         success: true,
         stats,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -183,15 +187,14 @@ export class RagController {
         message: "Data refreshed successfully",
         stats,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "Refresh failed",
       };
     }
   }
-
 
   @Post("clear")
   async clearAllData() {
@@ -205,12 +208,29 @@ export class RagController {
         message: "All data cleared successfully",
         stats,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: "Failed to clear data",
       };
     }
+  }
+
+  /**
+   * Trigger manual refresh via scheduler
+   * This uses the scheduler service which has anti-concurrent protection
+   */
+  @Post("refresh/manual")
+  async triggerManualRefresh() {
+    return await this.ragSchedulerService.triggerManualRefresh();
+  }
+
+  /**
+   * Get current refresh status
+   */
+  @Get("refresh/status")
+  getRefreshStatus() {
+    return this.ragSchedulerService.getRefreshStatus();
   }
 }

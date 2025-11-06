@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { EmbeddingService } from "./embedding.service";
 import { ScraperService } from "./scraper.service";
-import { VectorService, SearchResult } from "./vector.service";
+import { VectorService, SearchResult, IndexStats } from "./vector.service";
 import { ScrapedContent } from "./dto";
 
 @Injectable()
@@ -12,16 +12,20 @@ export class RagService implements OnModuleInit {
     private vectorService: VectorService,
   ) {}
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     // Initialize Pinecone index only (no auto-seeding)
     await this.vectorService.initializeIndex();
 
     // Check stats
-    const stats = await this.vectorService.getIndexStats();
+    const stats: IndexStats | null = await this.vectorService.getIndexStats();
     if (stats && stats.totalVectorCount > 0) {
-      console.log(`Pinecone index ready with ${stats.totalVectorCount} vectors`);
+      console.log(
+        `Pinecone index ready with ${stats.totalVectorCount} vectors`,
+      );
     } else {
-      console.log(`Pinecone index ready (empty). Run 'npm run seed:rag' to add data.`);
+      console.log(
+        `Pinecone index ready (empty). Run 'npm run seed:rag' to add data.`,
+      );
     }
   }
 
@@ -42,7 +46,7 @@ export class RagService implements OnModuleInit {
 
       // Filter by threshold (Pinecone uses cosine similarity, values 0-1)
       return results.filter((result) => result.score >= threshold);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error searching similar documents:", error);
       return [];
     }
@@ -90,7 +94,7 @@ export class RagService implements OnModuleInit {
 
       // Upsert all chunks to Pinecone
       await this.vectorService.upsertDocuments(documents);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error adding document:", error);
     }
   }
@@ -107,7 +111,9 @@ export class RagService implements OnModuleInit {
       );
     }
 
-    console.log(`Processing ${uniqueContents.length} unique articles for embedding...`);
+    console.log(
+      `Processing ${uniqueContents.length} unique articles for embedding...`,
+    );
 
     const allDocuments: Array<{
       id: string;
@@ -125,7 +131,9 @@ export class RagService implements OnModuleInit {
     for (let i = 0; i < uniqueContents.length; i++) {
       const content = uniqueContents[i];
       try {
-        console.log(`[${i + 1}/${uniqueContents.length}] Creating embeddings for: ${content.title.substring(0, 50)}...`);
+        console.log(
+          `[${i + 1}/${uniqueContents.length}] Creating embeddings for: ${content.title.substring(0, 50)}...`,
+        );
 
         // Split content into chunks
         const chunks = this.chunkContent(content.content, 1000);
@@ -143,7 +151,8 @@ export class RagService implements OnModuleInit {
             embedding: embedding,
             metadata: {
               content: chunk,
-              title: j === 0 ? content.title : `${content.title} (Part ${j + 1})`,
+              title:
+                j === 0 ? content.title : `${content.title} (Part ${j + 1})`,
               url: content.url,
               source: content.source,
               publishedAt: content.publishedAt || new Date(),
@@ -155,8 +164,11 @@ export class RagService implements OnModuleInit {
         }
 
         console.log(`  ✓ Created ${chunks.length} embeddings`);
-      } catch (error) {
-        console.error(`  ✗ Error processing document ${content.title}:`, error.message);
+      } catch (error: unknown) {
+        console.error(
+          `  ✗ Error processing document ${content.title}:`,
+          error instanceof Error ? error.message : String(error),
+        );
         // Continue with other documents
       }
     }
@@ -167,7 +179,7 @@ export class RagService implements OnModuleInit {
       await this.vectorService.upsertDocuments(allDocuments);
       console.log(`✓ Successfully upserted all ${allDocuments.length} vectors`);
     } else {
-      console.log('⚠️  No documents to upsert');
+      console.log("⚠️  No documents to upsert");
     }
   }
 
@@ -176,13 +188,13 @@ export class RagService implements OnModuleInit {
       console.log("Refreshing crypto data from CoinGecko API...");
 
       // Fetch all CoinGecko data (coins, categories, trending, global)
-      const content = await this.scraperService.getAllCoinGeckoData(100);
+      const content = await this.scraperService.getAllCoinGeckoData();
       await this.addMultipleDocuments(content);
 
       console.log(`Added ${content.length} items to knowledge base`);
 
       await this.vectorService.deleteOldDocuments(30);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error refreshing crypto data:", error);
     }
   }
@@ -219,7 +231,7 @@ Content: ${result.content}
       }
 
       return context;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error getting relevant context:", error);
       return "Error retrieving context from knowledge base.";
     }
@@ -238,11 +250,11 @@ Content: ${result.content}
 
       console.log("Initializing with CoinGecko crypto content...");
 
-      const content = await this.scraperService.getAllCoinGeckoData(50);
+      const content = await this.scraperService.getAllCoinGeckoData();
       await this.addMultipleDocuments(content);
 
       console.log("Content initialized successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error initializing content:", error);
     }
   }

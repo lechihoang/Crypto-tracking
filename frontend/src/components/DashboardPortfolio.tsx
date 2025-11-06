@@ -1,19 +1,13 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus, Wallet } from 'lucide-react';
+import { PortfolioValue } from '@/types';
 
-interface HoldingData {
-  holding: {
-    id: string;
-    coinId: string;
-    coinSymbol: string;
-    coinName: string;
-    coinImage?: string;
-    quantity: number;
-  };
-  currentValue: number;
-}
+// Type alias for holdings from PortfolioValue
+type HoldingData = PortfolioValue['holdings'][number];
 
 interface DashboardPortfolioProps {
   holdings: HoldingData[];
@@ -22,7 +16,7 @@ interface DashboardPortfolioProps {
   formatCurrency: (amount: number) => string;
 }
 
-export default function DashboardPortfolio({
+const DashboardPortfolio = React.memo(function DashboardPortfolio({
   holdings,
   totalValue,
   coinsCount,
@@ -69,37 +63,37 @@ export default function DashboardPortfolio({
         {holdings
           .sort((a, b) => b.currentValue - a.currentValue)
           .slice(0, 5)
-          .map((holding) => {
+          .map((holding, index) => {
             const { coinSymbol, coinName, coinImage, quantity } = holding.holding;
             const percentage = totalValue > 0 ? (holding.currentValue / totalValue * 100).toFixed(2) : '0';
 
             return (
               <div
-                key={holding.holding.id}
+                key={`${holding.holding.id}-${holding.holding.coinId}-${index}`}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   {coinImage ? (
-                    <img
-                      src={coinImage}
-                      alt={coinSymbol}
-                      className="w-10 h-10 rounded-full"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = target.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${coinImage ? 'hidden' : ''}`}
-                    style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
-                  >
-                    <span className="text-lg font-bold text-white">
-                      {coinSymbol.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <Image
+                        src={coinImage}
+                        alt={coinSymbol}
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
+                    >
+                      <span className="text-lg font-bold text-white">
+                        {coinSymbol.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-medium text-gray-900">{coinName}</h4>
                     <p className="text-xs text-gray-600">
@@ -133,4 +127,8 @@ export default function DashboardPortfolio({
       </Link>
     </div>
   );
-}
+});
+
+DashboardPortfolio.displayName = 'DashboardPortfolio';
+
+export default DashboardPortfolio;

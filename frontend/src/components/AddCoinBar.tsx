@@ -5,13 +5,7 @@ import { Plus, Search, Loader, X } from 'lucide-react';
 import { portfolioApi, clientApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-interface Coin {
-  id: number;
-  name: string;
-  symbol: string;
-  slug: string;
-  image?: string;
-}
+import { Coin } from '@/types';
 
 interface AddCoinBarProps {
   onSuccess: () => void;
@@ -34,6 +28,7 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
     if (showForm && coins.length === 0) {
       loadTopCoins();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showForm]);
 
   // Filter coins based on search term
@@ -54,13 +49,14 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
     try {
       const result = await clientApi.getLatestListings(100);
       if (result.data) {
-        const coinData = result.data.map((coin: any) => ({
-          id: coin.id,
-          name: coin.name,
-          symbol: coin.symbol,
-          slug: coin.slug,
-          image: coin.image,
-        }));
+        const coinData = result.data
+          .filter(coin => coin.image)
+          .map(coin => ({
+            id: coin.slug || String(coin.id),
+            name: coin.name,
+            symbol: coin.symbol,
+            image: coin.image!,
+          }));
         setCoins(coinData);
         setFilteredCoins(coinData.slice(0, 10));
       }
@@ -90,7 +86,7 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
     try {
       const addPromise = (async () => {
         const result = await portfolioApi.addHolding({
-          coinId: selectedCoin.slug,
+          coinId: selectedCoin.id,
           coinSymbol: selectedCoin.symbol,
           coinName: selectedCoin.name,
           coinImage: selectedCoin.image,

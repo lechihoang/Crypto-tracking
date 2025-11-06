@@ -1,40 +1,32 @@
 import axios from 'axios';
 
 // Backend API response interfaces
-interface BackendCoinData {
-  id: string;
-  name: string;
-  symbol: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
-  market_cap_rank?: number;
-}
 
-interface BackendCoinDetailData {
-  id: string;
-  name: string;
-  symbol: string;
-  description?: { en?: string };
-  image?: { large?: string };
-  links?: {
-    homepage?: string[];
-    whitepaper?: string[];
-    twitter_screen_name?: string;
-    subreddit_url?: string;
-    official_forum_url?: string[];
-    announcement_url?: string[];
-    chat_url?: string[];
-    blockchain_site?: string[];
-    repos_url?: { github?: string[] };
-  };
-  market_data?: {
-    current_price?: { usd?: number };
-    price_change_percentage_24h?: number;
-    market_cap?: { usd?: number };
-  };
-  market_cap_rank?: number;
-}
+import {
+  // Auth types
+  SignInRequest,
+  SignUpRequest,
+  ResetPasswordRequest,
+  UpdatePasswordRequest,
+  ChangePasswordRequest,
+  AuthResponse,
+
+  // Portfolio types
+  PortfolioHolding,
+  PortfolioValue,
+  PortfolioSnapshot,
+  CreateHoldingRequest,
+  UpdateHoldingRequest,
+  PortfolioResponse,
+
+  // Alert types
+  PriceAlert,
+  CreateAlertRequest,
+  AlertsResponse,
+
+  // Crypto types
+  CoinDetails,
+} from '@/types';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -75,8 +67,8 @@ export const clientApi = {
 
     // Transform backend response to match frontend expectations
     return {
-      data: (response.data as CoinGeckoData[]).map((coin, index: number) => ({
-        id: index + 1, // Use index as numeric ID for compatibility
+      data: (response.data as CoinGeckoData[]).map((coin) => ({
+        id: coin.id, // Use CoinGecko string ID directly
         name: coin.name,
         symbol: coin.symbol,
         slug: coin.id, // Store the string ID in slug field
@@ -114,8 +106,8 @@ export const clientApi = {
     const response = await backendApi.get(`/crypto/${id}`);
     if (response.status !== 200) throw new Error('Failed to fetch coin info');
 
-    const coinData = response.data as BackendCoinDetailData & {
-      tickers?: any[];
+    const coinData = response.data as CoinDetails & {
+      tickers?: Array<Record<string, unknown>>;
     };
     // Transform backend response to match frontend expectations
     return {
@@ -134,15 +126,15 @@ export const clientApi = {
           tag_names: [],
           tag_groups: [],
           urls: {
-            website: coinData.links?.homepage || [],
-            technical_doc: coinData.links?.whitepaper || [],
+            website: Array.isArray(coinData.links?.homepage) ? coinData.links.homepage : [],
+            technical_doc: Array.isArray((coinData.links as Record<string, unknown>)?.whitepaper) ? (coinData.links as Record<string, unknown>).whitepaper as string[] : [],
             twitter: coinData.links?.twitter_screen_name ? [`https://twitter.com/${coinData.links.twitter_screen_name}`] : [],
             reddit: coinData.links?.subreddit_url ? [coinData.links.subreddit_url] : [],
-            message_board: coinData.links?.official_forum_url || [],
-            announcement: coinData.links?.announcement_url || [],
-            chat: coinData.links?.chat_url || [],
-            explorer: coinData.links?.blockchain_site || [],
-            source_code: coinData.links?.repos_url?.github || [],
+            message_board: Array.isArray(coinData.links?.official_forum_url) ? coinData.links.official_forum_url : [],
+            announcement: Array.isArray(coinData.links?.announcement_url) ? coinData.links.announcement_url : [],
+            chat: Array.isArray(coinData.links?.chat_url) ? coinData.links.chat_url : [],
+            explorer: Array.isArray(coinData.links?.blockchain_site) ? coinData.links.blockchain_site : [],
+            source_code: Array.isArray(coinData.links?.repos_url?.github) ? coinData.links.repos_url.github : [],
             facebook: [],
           },
           platform: null,
@@ -170,7 +162,7 @@ export const clientApi = {
     return {
       data: {
         [ids]: {
-          id: parseInt(ids) || 1,
+          id: marketData.id || ids, // Use string ID from CoinGecko
           name: marketData.name,
           symbol: marketData.symbol,
           slug: marketData.id,
@@ -213,9 +205,9 @@ export const clientApi = {
     const response = await backendApi.get(`/crypto/${id}/vi`);
     if (response.status !== 200) throw new Error('Failed to fetch coin info in Vietnamese');
 
-    const coinData = response.data as BackendCoinDetailData & {
+    const coinData = response.data as CoinDetails & {
       description?: { vi?: string };
-      tickers?: any[];
+      tickers?: Array<Record<string, unknown>>;
     };
     // Transform backend response to match frontend expectations
     return {
@@ -234,15 +226,15 @@ export const clientApi = {
           tag_names: [],
           tag_groups: [],
           urls: {
-            website: coinData.links?.homepage || [],
-            technical_doc: coinData.links?.whitepaper || [],
+            website: Array.isArray(coinData.links?.homepage) ? coinData.links.homepage : [],
+            technical_doc: Array.isArray((coinData.links as Record<string, unknown>)?.whitepaper) ? (coinData.links as Record<string, unknown>).whitepaper as string[] : [],
             twitter: coinData.links?.twitter_screen_name ? [`https://twitter.com/${coinData.links.twitter_screen_name}`] : [],
             reddit: coinData.links?.subreddit_url ? [coinData.links.subreddit_url] : [],
-            message_board: coinData.links?.official_forum_url || [],
-            announcement: coinData.links?.announcement_url || [],
-            chat: coinData.links?.chat_url || [],
-            explorer: coinData.links?.blockchain_site || [],
-            source_code: coinData.links?.repos_url?.github || [],
+            message_board: Array.isArray(coinData.links?.official_forum_url) ? coinData.links.official_forum_url : [],
+            announcement: Array.isArray(coinData.links?.announcement_url) ? coinData.links.announcement_url : [],
+            chat: Array.isArray(coinData.links?.chat_url) ? coinData.links.chat_url : [],
+            explorer: Array.isArray(coinData.links?.blockchain_site) ? coinData.links.blockchain_site : [],
+            source_code: Array.isArray(coinData.links?.repos_url?.github) ? coinData.links.repos_url.github : [],
             facebook: [],
           },
           platform: null,
@@ -261,58 +253,39 @@ export const clientApi = {
   },
 };
 
-// Auth API interfaces
-interface SignInRequest {
-  email: string;
-  password: string;
-}
-
-interface SignUpRequest {
-  email: string;
-  password: string;
-  fullName?: string;
-}
-
-interface ResetPasswordRequest {
-  email: string;
-}
-
-interface UpdatePasswordRequest {
-  password: string;
-  accessToken: string;
-}
-
-interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-}
-
-interface AuthResponse {
-  user?: {
-    id: string;
-    email: string;
-    full_name?: string;
-  };
-  access_token?: string;
-  message?: string;
-  error?: string;
-}
 
 // Auth API client using backend
 export const authApi = {
   async signIn(credentials: SignInRequest): Promise<AuthResponse> {
     try {
+      console.log('Sending signin request to backend:', credentials);
       const response = await backendApi.post('/auth/signin', credentials);
+
+      console.log('Backend response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        hasAccessToken: !!response.data?.access_token,
+      });
 
       if (response.data.access_token) {
         localStorage.setItem('auth_token', response.data.access_token);
+        if (response.data.id_token) {
+          localStorage.setItem('id_token', response.data.id_token);
+        }
         this.syncTokenToCookie(response.data.access_token);
         return response.data;
       }
 
+      console.error('No access_token in response:', response.data);
       return { error: 'Đăng nhập thất bại' };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
+      console.error('SignIn request error:', error);
+      const err = error as { response?: { data?: { message?: string }; status?: number } };
+      console.error('Error details:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+      });
       return {
         error: err.response?.data?.message || 'Đăng nhập thất bại'
       };
@@ -396,7 +369,8 @@ export const authApi = {
         user: {
           id: response.data.id,
           email: response.data.email,
-          full_name: response.data.user_metadata?.full_name,
+          name: response.data.name,
+          picture: response.data.picture,
         },
       };
     } catch (error: unknown) {
@@ -408,9 +382,25 @@ export const authApi = {
     }
   },
 
-  signOut(): void {
+  async signOut(): Promise<void> {
     if (typeof window !== 'undefined') {
+      const token = this.getToken();
+
+      // Call backend logout endpoint to clear cache
+      if (token) {
+        try {
+          await backendApi.post('/auth/logout', {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (error) {
+          // Even if logout API fails, we still clear local tokens
+          console.error('Logout API error:', error);
+        }
+      }
+
+      // Clear local storage and cookies
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('id_token');
       // Remove cookie
       document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/';
     }
@@ -428,42 +418,57 @@ export const authApi = {
   // Helper to sync token to cookies for middleware
   syncTokenToCookie(token: string): void {
     if (typeof window !== 'undefined') {
-      document.cookie = `auth_token=${token}; path=/; secure; samesite=strict`;
+      document.cookie = `auth_token=${token}; path=/; samesite=strict`;
     }
+  },
+
+  // Social Login Methods
+  loginWithGoogle(): void {
+    window.location.href = `${BACKEND_API_URL}/auth/google`;
+  },
+
+  // Handle OAuth callback (called from callback page)
+  handleAuthCallback(params: URLSearchParams): AuthResponse {
+    const error = params.get('error');
+    if (error) {
+      return { error: decodeURIComponent(error) };
+    }
+
+    const accessToken = params.get('access_token');
+    const idToken = params.get('id_token');
+    const userId = params.get('user_id');
+    const email = params.get('email');
+    const name = params.get('name');
+    const picture = params.get('picture');
+
+    if (accessToken && userId && email) {
+      localStorage.setItem('auth_token', accessToken);
+      if (idToken) {
+        localStorage.setItem('id_token', idToken);
+      }
+      this.syncTokenToCookie(accessToken);
+
+      return {
+        user: {
+          id: userId,
+          email,
+          name: name || undefined,
+          picture: picture || undefined,
+        },
+        access_token: accessToken,
+        id_token: idToken || undefined,
+      };
+    }
+
+    return { error: 'Invalid callback parameters' };
   }
 };
 
 // Price Alerts API interfaces
-interface PriceAlert {
-  id: string;
-  userId: string;
-  coinId: number;
-  coinSymbol: string;
-  coinName: string;
-  condition: 'above' | 'below';
-  targetPrice: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CreateAlertRequest {
-  coinId: number;
-  coinSymbol: string;
-  coinName: string;
-  condition: 'above' | 'below';
-  targetPrice: number;
-}
-
-interface AlertsResponse {
-  data?: PriceAlert[];
-  error?: string;
-  message?: string;
-}
 
 // Price Alerts API client
 export const alertsApi = {
-  async createAlert(alertData: CreateAlertRequest): Promise<AlertsResponse> {
+  async createAlert(alertData: CreateAlertRequest): Promise<AlertsResponse<PriceAlert[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -484,7 +489,7 @@ export const alertsApi = {
     }
   },
 
-  async getAlerts(): Promise<AlertsResponse> {
+  async getAlerts(): Promise<AlertsResponse<PriceAlert[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -505,7 +510,7 @@ export const alertsApi = {
     }
   },
 
-  async deleteAlert(alertId: string): Promise<AlertsResponse> {
+  async deleteAlert(alertId: string): Promise<AlertsResponse<void>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -526,7 +531,7 @@ export const alertsApi = {
     }
   },
 
-  async toggleAlert(alertId: string, isActive: boolean): Promise<AlertsResponse> {
+  async toggleAlert(alertId: string, isActive: boolean): Promise<AlertsResponse<void>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -548,66 +553,36 @@ export const alertsApi = {
         error: err.response?.data?.message || 'Cập nhật cảnh báo thất bại'
       };
     }
+  },
+
+  async getTriggeredAlerts(): Promise<AlertsResponse<PriceAlert[]>> {
+    try {
+      const token = authApi.getToken();
+      if (!token) {
+        return { error: 'Không tìm thấy token xác thực' };
+      }
+
+      const response = await backendApi.get('/alerts/triggered', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Backend already returns camelCase, no transformation needed
+      return { data: response.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        error: err.response?.data?.message || 'Lấy danh sách thông báo thất bại'
+      };
+    }
   }
 };
 
 // Portfolio API interfaces
-interface PortfolioHolding {
-  id: string;
-  userId: string;
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  quantity: number;
-  averageBuyPrice?: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CreateHoldingRequest {
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  coinImage?: string;
-  quantity: number;
-  averageBuyPrice?: number;
-  notes?: string;
-}
-
-interface UpdateHoldingRequest {
-  quantity?: number;
-  averageBuyPrice?: number;
-  notes?: string;
-}
-
-interface PortfolioValue {
-  totalValue: number;
-  holdings: Array<{
-    holding: PortfolioHolding;
-    currentPrice: number;
-    currentValue: number;
-    profitLoss?: number;
-    profitLossPercentage?: number;
-  }>;
-}
-
-interface PortfolioSnapshot {
-  id: string;
-  userId: string;
-  totalValue: number;
-  snapshotDate: string;
-}
-
-interface PortfolioResponse {
-  data?: PortfolioHolding[] | PortfolioValue | PortfolioSnapshot[];
-  error?: string;
-  message?: string;
-}
-
 // Portfolio API client
 export const portfolioApi = {
-  async getHoldings(): Promise<PortfolioResponse> {
+  async getHoldings(): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -626,7 +601,7 @@ export const portfolioApi = {
     }
   },
 
-  async addHolding(holdingData: CreateHoldingRequest): Promise<PortfolioResponse> {
+  async addHolding(holdingData: CreateHoldingRequest): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -645,7 +620,7 @@ export const portfolioApi = {
     }
   },
 
-  async updateHolding(holdingId: string, holdingData: UpdateHoldingRequest): Promise<PortfolioResponse> {
+  async updateHolding(holdingId: string, holdingData: UpdateHoldingRequest): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -664,7 +639,7 @@ export const portfolioApi = {
     }
   },
 
-  async removeHolding(holdingId: string): Promise<PortfolioResponse> {
+  async removeHolding(holdingId: string): Promise<PortfolioResponse<void>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -683,7 +658,7 @@ export const portfolioApi = {
     }
   },
 
-  async getPortfolioValue(): Promise<PortfolioResponse> {
+  async getPortfolioValue(): Promise<PortfolioResponse<PortfolioValue>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -702,7 +677,7 @@ export const portfolioApi = {
     }
   },
 
-  async getPortfolioHistory(days: number = 30): Promise<PortfolioResponse> {
+  async getPortfolioHistory(days: number = 30): Promise<PortfolioResponse<PortfolioSnapshot[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -721,7 +696,7 @@ export const portfolioApi = {
     }
   },
 
-  async createSnapshot(): Promise<PortfolioResponse> {
+  async createSnapshot(): Promise<PortfolioResponse<PortfolioSnapshot[]>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -740,7 +715,7 @@ export const portfolioApi = {
     }
   },
 
-  async getPortfolioValueHistory(days: number = 7): Promise<PortfolioResponse> {
+  async getPortfolioValueHistory(days: number = 7): Promise<PortfolioResponse<unknown>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -759,7 +734,7 @@ export const portfolioApi = {
     }
   },
 
-  async setBenchmark(benchmarkValue: number): Promise<PortfolioResponse> {
+  async setBenchmark(benchmarkValue: number): Promise<PortfolioResponse<unknown>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -779,7 +754,7 @@ export const portfolioApi = {
     }
   },
 
-  async getBenchmark(): Promise<PortfolioResponse> {
+  async getBenchmark(): Promise<PortfolioResponse<unknown>> {
     try {
       const token = authApi.getToken();
       if (!token) {
@@ -798,7 +773,7 @@ export const portfolioApi = {
     }
   },
 
-  async deleteBenchmark(): Promise<PortfolioResponse> {
+  async deleteBenchmark(): Promise<PortfolioResponse<void>> {
     try {
       const token = authApi.getToken();
       if (!token) {

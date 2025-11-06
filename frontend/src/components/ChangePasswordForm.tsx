@@ -57,7 +57,7 @@ export default function ChangePasswordForm() {
       );
 
       await changePasswordPromise;
-    } catch (err) {
+    } catch {
       // Error already handled by toast.promise
     } finally {
       setLoading(false);

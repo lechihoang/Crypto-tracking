@@ -1,19 +1,12 @@
 import React from 'react';
 import { BarChart3, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
-
-interface Stat {
-  title: string;
-  value: string;
-  change: string;
-  changeType: 'positive' | 'negative' | 'neutral';
-  icon: React.ComponentType<{ className?: string }>;
-}
+import { DashboardStat } from '@/types';
 
 interface DashboardStatsProps {
-  stats?: Stat[];
+  stats?: DashboardStat[];
 }
 
-const defaultStats: Stat[] = [
+const defaultStats: DashboardStat[] = [
   {
     title: 'Tổng giá trị danh mục',
     value: '$0.00',
@@ -44,11 +37,11 @@ const defaultStats: Stat[] = [
   },
 ];
 
-export default function DashboardStats({ stats = defaultStats }: DashboardStatsProps) {
+const DashboardStats = React.memo(function DashboardStats({ stats = defaultStats }: DashboardStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {stats.map((stat, index) => (
-        <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      {stats.map((stat) => (
+        <div key={stat.title} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
@@ -79,4 +72,8 @@ export default function DashboardStats({ stats = defaultStats }: DashboardStatsP
       ))}
     </div>
   );
-}
+});
+
+DashboardStats.displayName = 'DashboardStats';
+
+export default DashboardStats;

@@ -6,7 +6,7 @@ import { CryptoCurrency } from '@/types/crypto';
 
 interface SearchSectionProps {
   allCryptos: CryptoCurrency[];
-  onCoinClick: (coinId: number) => void;
+  onCoinClick: (coinId: number | string) => void;
 }
 
 export default function SearchSection({ allCryptos, onCoinClick }: SearchSectionProps) {
@@ -41,7 +41,7 @@ export default function SearchSection({ allCryptos, onCoinClick }: SearchSection
     crypto.symbol.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCoinClickInternal = (coinId: number) => {
+  const handleCoinClickInternal = (coinId: number | string) => {
     setIsSearchOpen(false);
     setSearchTerm('');
     onCoinClick(coinId);
@@ -114,15 +114,15 @@ export default function SearchSection({ allCryptos, onCoinClick }: SearchSection
               </div>
               <div className="text-right">
                 <div className="font-bold text-gray-900 text-base">
-                  ${crypto.quote.USD.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                  ${crypto.quote?.USD?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 }) || 'N/A'}
                 </div>
                 <div className={`text-sm font-semibold flex items-center justify-end gap-1 ${
-                  crypto.quote.USD.percent_change_24h >= 0 ? 'text-green-600' : 'text-red-600'
+                  (crypto.quote?.USD?.percent_change_24h || 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
                   <span className={`w-2 h-2 rounded-full ${
-                    crypto.quote.USD.percent_change_24h >= 0 ? 'bg-green-600' : 'bg-red-600'
+                    (crypto.quote?.USD?.percent_change_24h || 0) >= 0 ? 'bg-green-600' : 'bg-red-600'
                   }`}></span>
-                  {crypto.quote.USD.percent_change_24h >= 0 ? '+' : ''}{crypto.quote.USD.percent_change_24h.toFixed(2)}%
+                  {(crypto.quote?.USD?.percent_change_24h || 0) >= 0 ? '+' : ''}{(crypto.quote?.USD?.percent_change_24h || 0).toFixed(2)}%
                 </div>
               </div>
             </button>

@@ -1,23 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { portfolioApi } from '@/lib/api';
-import { Loader, TrendingUp, TrendingDown } from 'lucide-react';
-
-interface PortfolioSnapshot {
-  id: string;
-  totalValue: number;
-  createdAt: string;
-}
-
-interface ChartDataPoint {
-  date: string;
-  value: number;
-  formattedDate: string;
-}
-
-export default function PortfolioChart() {
+import { TrendingUp } from 'lucide-react';
+import LoadingSpinner from './LoadingSpinner';
+import { ChartDataPoint } from '@/types';
+const PortfolioChart = React.memo(function PortfolioChart() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,6 +14,7 @@ export default function PortfolioChart() {
 
   useEffect(() => {
     fetchPortfolioHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 
   const fetchPortfolioHistory = async () => {
@@ -41,8 +31,8 @@ export default function PortfolioChart() {
         } else {
           setError(result.error);
         }
-      } else if (result.data) {
-        const history = result.data as Array<{ timestamp: number; totalValue: number; date: string }>;
+      } else if (result.data && Array.isArray(result.data)) {
+        const history = result.data as unknown as Array<{ timestamp: number; totalValue: number; date: string }>;
         const processedData = history.map((dataPoint) => ({
           date: dataPoint.date,
           value: Number(dataPoint.totalValue),
@@ -52,8 +42,9 @@ export default function PortfolioChart() {
         setChartData(processedData);
         setError(''); // Clear any previous errors
       }
-    } catch (err: any) {
-      if (err.response?.status === 429) {
+    } catch (err: unknown) {
+      const error = err as { response?: { status?: number } };
+      if (error.response?.status === 429) {
         setError('API bị giới hạn tốc độ. Vui lòng đợi 1-2 phút và thử lại.');
       } else {
         setError('Không thể tải lịch sử giá trị portfolio');
@@ -63,25 +54,33 @@ export default function PortfolioChart() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = useCallback((value: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
+  }, []);
 
-  const formatCurrencyDetailed = (value: number) => {
+  const formatCurrencyDetailed = useCallback((value: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 8,
     }).format(value);
-  };
+  }, []);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipProps {
+    active?: boolean;
+    payload?: Array<{
+      value: number;
+      payload: ChartDataPoint;
+    }>;
+  }
+
+  const CustomTooltip = useCallback(({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
@@ -93,9 +92,9 @@ export default function PortfolioChart() {
       );
     }
     return null;
-  };
+  }, [formatCurrencyDetailed]);
 
-  const getChangeInfo = () => {
+  const changeInfo = useMemo(() => {
     if (chartData.length < 2) return { change: 0, percentage: 0, isPositive: true };
 
     const firstValue = chartData[0].value;
@@ -108,15 +107,13 @@ export default function PortfolioChart() {
       percentage,
       isPositive: change >= 0,
     };
-  };
-
-  const changeInfo = getChangeInfo();
+  }, [chartData]);
 
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-center h-64">
-          <Loader className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="h-64">
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     );
@@ -237,4 +234,8 @@ export default function PortfolioChart() {
       )}
     </div>
   );
-}
+});
+
+PortfolioChart.displayName = 'PortfolioChart';
+
+export default PortfolioChart;

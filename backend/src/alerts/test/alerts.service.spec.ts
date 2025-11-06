@@ -1,43 +1,69 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
+import { getModelToken } from "@nestjs/mongoose";
 import { AlertsService } from "../alerts.service";
-import { PriceAlert } from "../../entities";
-import { CryptoService } from "../../crypto/crypto.service";
+import { PriceAlert } from "../../schemas/price-alert.schema";
 import { CreateAlertDto } from "../dto/create-alert.dto";
 
 describe("AlertsService", () => {
   let service: AlertsService;
 
-  const mockRepository = {
-    create: jest.fn(),
-    save: jest.fn(),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    delete: jest.fn(),
-    update: jest.fn(),
-  };
+  // Mock Mongoose model instance methods
+  const mockSave = jest.fn();
+  const mockExec = jest.fn();
+  const mockSort = jest.fn();
+  const mockLimit = jest.fn();
+  const mockFind = jest.fn();
+  const mockFindOne = jest.fn();
+  const mockDeleteOne = jest.fn();
+  const mockUpdateOne = jest.fn();
 
-  const mockCryptoService = {
-    getTopCoins: jest.fn(),
-    getCoinDetails: jest.fn(),
-  };
+  // Mock Mongoose model constructor
+  const mockAlertModel: any = jest.fn().mockImplementation((dto) => ({
+    ...dto,
+    save: mockSave,
+  }));
+
+  // Add static methods to the mock model
+  mockAlertModel.find = mockFind.mockReturnValue({
+    sort: mockSort.mockReturnValue({
+      exec: mockExec,
+      limit: mockLimit.mockReturnValue({
+        exec: mockExec,
+      }),
+    }),
+    exec: mockExec,
+  });
+  mockAlertModel.findOne = mockFindOne.mockReturnValue({
+    exec: mockExec,
+  });
+  mockAlertModel.deleteOne = mockDeleteOne.mockReturnValue({
+    exec: mockExec,
+  });
+  mockAlertModel.updateOne = mockUpdateOne.mockReturnValue({
+    exec: mockExec,
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertsService,
         {
-          provide: getRepositoryToken(PriceAlert),
-          useValue: mockRepository,
-        },
-        {
-          provide: CryptoService,
-          useValue: mockCryptoService,
+          provide: getModelToken(PriceAlert.name),
+          useValue: mockAlertModel,
         },
       ],
     }).compile();
 
     service = module.get<AlertsService>(AlertsService);
+
+    // Reset mocks
+    jest.clearAllMocks();
+    mockSort.mockReturnValue({
+      exec: mockExec,
+      limit: mockLimit.mockReturnValue({
+        exec: mockExec,
+      }),
+    });
   });
 
   afterEach(() => {
@@ -53,36 +79,28 @@ describe("AlertsService", () => {
       const userId = "user-123";
       const createAlertDto: CreateAlertDto = {
         coinId: "bitcoin",
-        coinSymbol: "BTC",
-        coinName: "Bitcoin",
         condition: "above",
         targetPrice: 50000,
       };
 
-      const mockAlert: PriceAlert = {
-        id: "alert-1",
+      const mockAlert = {
+        _id: "alert-1",
         userId,
         ...createAlertDto,
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockAlert);
-      mockRepository.save.mockResolvedValue(mockAlert);
+      mockSave.mockResolvedValue(mockAlert);
 
       const result = await service.createAlert(userId, createAlertDto);
 
-      expect(mockRepository.create).toHaveBeenCalledWith({
+      expect(mockAlertModel).toHaveBeenCalledWith({
+        ...createAlertDto,
         userId,
-        coinId: createAlertDto.coinId,
-        coinSymbol: createAlertDto.coinSymbol,
-        coinName: createAlertDto.coinName,
-        condition: createAlertDto.condition,
-        targetPrice: createAlertDto.targetPrice,
         isActive: true,
       });
-      expect(mockRepository.save).toHaveBeenCalledWith(mockAlert);
+      expect(mockSave).toHaveBeenCalled();
       expect(result).toEqual(mockAlert);
     });
 
@@ -90,23 +108,19 @@ describe("AlertsService", () => {
       const userId = "user-456";
       const createAlertDto: CreateAlertDto = {
         coinId: "ethereum",
-        coinSymbol: "ETH",
-        coinName: "Ethereum",
         condition: "below",
         targetPrice: 3000,
       };
 
-      const mockAlert: PriceAlert = {
-        id: "alert-2",
+      const mockAlert = {
+        _id: "alert-2",
         userId,
         ...createAlertDto,
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
-      mockRepository.create.mockReturnValue(mockAlert);
-      mockRepository.save.mockResolvedValue(mockAlert);
+      mockSave.mockResolvedValue(mockAlert);
 
       const result = await service.createAlert(userId, createAlertDto);
 
@@ -118,48 +132,41 @@ describe("AlertsService", () => {
   describe("getUserAlerts", () => {
     it("should return all alerts for a user", async () => {
       const userId = "user-123";
-      const mockAlerts: PriceAlert[] = [
+      const mockAlerts = [
         {
-          id: "alert-1",
+          _id: "alert-1",
           userId,
-          coinId: "bitcoin",
-          coinSymbol: "BTC",
-          coinName: "Bitcoin",
+          coinName: "bitcoin",
           condition: "above",
           targetPrice: 50000,
           isActive: true,
           createdAt: new Date("2024-01-01"),
-          updatedAt: new Date("2024-01-01"),
         },
         {
-          id: "alert-2",
+          _id: "alert-2",
           userId,
-          coinId: "ethereum",
-          coinSymbol: "ETH",
-          coinName: "Ethereum",
+          coinName: "ethereum",
           condition: "below",
           targetPrice: 3000,
           isActive: true,
           createdAt: new Date("2024-01-02"),
-          updatedAt: new Date("2024-01-02"),
         },
       ];
 
-      mockRepository.find.mockResolvedValue(mockAlerts);
+      mockExec.mockResolvedValue(mockAlerts);
 
       const result = await service.getUserAlerts(userId);
 
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        order: { createdAt: "DESC" },
-      });
+      expect(mockAlertModel.find).toHaveBeenCalledWith({ userId });
+      expect(mockSort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(mockExec).toHaveBeenCalled();
       expect(result).toEqual(mockAlerts);
       expect(result).toHaveLength(2);
     });
 
     it("should return empty array if user has no alerts", async () => {
       const userId = "user-no-alerts";
-      mockRepository.find.mockResolvedValue([]);
+      mockExec.mockResolvedValue([]);
 
       const result = await service.getUserAlerts(userId);
 
@@ -173,21 +180,22 @@ describe("AlertsService", () => {
       const userId = "user-123";
       const alertId = "alert-1";
 
-      mockRepository.delete.mockResolvedValue({ affected: 1, raw: [] });
+      mockExec.mockResolvedValue({ deletedCount: 1 });
 
       await service.deleteAlert(userId, alertId);
 
-      expect(mockRepository.delete).toHaveBeenCalledWith({
-        id: alertId,
+      expect(mockAlertModel.deleteOne).toHaveBeenCalledWith({
+        _id: alertId,
         userId,
       });
+      expect(mockExec).toHaveBeenCalled();
     });
 
     it("should throw error if alert not found", async () => {
       const userId = "user-123";
       const alertId = "non-existent-alert";
 
-      mockRepository.delete.mockResolvedValue({ affected: 0, raw: [] });
+      mockExec.mockResolvedValue({ deletedCount: 0 });
 
       await expect(service.deleteAlert(userId, alertId)).rejects.toThrow(
         "Alert not found",
@@ -198,7 +206,7 @@ describe("AlertsService", () => {
       const userId = "user-123";
       const alertId = "alert-owned-by-other-user";
 
-      mockRepository.delete.mockResolvedValue({ affected: 0, raw: [] });
+      mockExec.mockResolvedValue({ deletedCount: 0 });
 
       await expect(service.deleteAlert(userId, alertId)).rejects.toThrow(
         "Alert not found",
@@ -207,32 +215,42 @@ describe("AlertsService", () => {
   });
 
   describe("toggleAlert", () => {
-    it("should activate an alert", async () => {
+    it("should toggle an alert from inactive to active", async () => {
       const userId = "user-123";
       const alertId = "alert-1";
-      const isActive = true;
+      const mockAlert = { isActive: false };
 
-      mockRepository.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] });
+      mockFindOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlert),
+      });
 
-      await service.toggleAlert(userId, alertId, isActive);
+      mockExec.mockResolvedValue({ matchedCount: 1 });
 
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        { id: alertId, userId },
-        { isActive },
+      await service.toggleAlert(userId, alertId);
+
+      expect(mockAlertModel.findOne).toHaveBeenCalledWith({ _id: alertId, userId });
+      expect(mockAlertModel.updateOne).toHaveBeenCalledWith(
+        { _id: alertId, userId },
+        { isActive: true },
       );
     });
 
-    it("should deactivate an alert", async () => {
+    it("should toggle an alert from active to inactive", async () => {
       const userId = "user-123";
       const alertId = "alert-1";
-      const isActive = false;
+      const mockAlert = { isActive: true };
 
-      mockRepository.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] });
+      mockFindOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlert),
+      });
 
-      await service.toggleAlert(userId, alertId, isActive);
+      mockExec.mockResolvedValue({ matchedCount: 1 });
 
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        { id: alertId, userId },
+      await service.toggleAlert(userId, alertId);
+
+      expect(mockAlertModel.findOne).toHaveBeenCalledWith({ _id: alertId, userId });
+      expect(mockAlertModel.updateOne).toHaveBeenCalledWith(
+        { _id: alertId, userId },
         { isActive: false },
       );
     });
@@ -241,56 +259,51 @@ describe("AlertsService", () => {
       const userId = "user-123";
       const alertId = "non-existent-alert";
 
-      mockRepository.update.mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+      mockFindOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
-      await expect(
-        service.toggleAlert(userId, alertId, true),
-      ).rejects.toThrow("Alert not found");
+      await expect(service.toggleAlert(userId, alertId)).rejects.toThrow(
+        "Alert not found",
+      );
     });
   });
 
   describe("getAllActiveAlerts", () => {
     it("should return all active alerts", async () => {
-      const mockActiveAlerts: PriceAlert[] = [
+      const mockActiveAlerts = [
         {
-          id: "alert-1",
+          _id: "alert-1",
           userId: "user-1",
-          coinId: "bitcoin",
-          coinSymbol: "BTC",
-          coinName: "Bitcoin",
+          coinName: "bitcoin",
           condition: "above",
           targetPrice: 50000,
           isActive: true,
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
-          id: "alert-2",
+          _id: "alert-2",
           userId: "user-2",
-          coinId: "ethereum",
-          coinSymbol: "ETH",
-          coinName: "Ethereum",
+          coinName: "ethereum",
           condition: "below",
           targetPrice: 3000,
           isActive: true,
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ];
 
-      mockRepository.find.mockResolvedValue(mockActiveAlerts);
+      mockExec.mockResolvedValue(mockActiveAlerts);
 
       const result = await service.getAllActiveAlerts();
 
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-      });
+      expect(mockAlertModel.find).toHaveBeenCalledWith({ isActive: true });
+      expect(mockExec).toHaveBeenCalled();
       expect(result).toEqual(mockActiveAlerts);
       expect(result.every((alert) => alert.isActive)).toBe(true);
     });
 
     it("should return empty array if no active alerts", async () => {
-      mockRepository.find.mockResolvedValue([]);
+      mockExec.mockResolvedValue([]);
 
       const result = await service.getAllActiveAlerts();
 
@@ -299,28 +312,26 @@ describe("AlertsService", () => {
   });
 
   describe("disableAlert", () => {
-    it("should disable an alert", async () => {
+    it("should disable an alert by deleting it", async () => {
       const alertId = "alert-1";
 
-      mockRepository.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] });
+      mockExec.mockResolvedValue({ deletedCount: 1 });
 
       await service.disableAlert(alertId);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(alertId, {
-        isActive: false,
-      });
+      expect(mockAlertModel.deleteOne).toHaveBeenCalledWith({ _id: alertId });
+      expect(mockExec).toHaveBeenCalled();
     });
 
-    it("should disable alert even if already inactive", async () => {
-      const alertId = "alert-already-inactive";
+    it("should handle alert that does not exist", async () => {
+      const alertId = "alert-already-deleted";
 
-      mockRepository.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] });
+      mockExec.mockResolvedValue({ deletedCount: 0 });
 
       await service.disableAlert(alertId);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(alertId, {
-        isActive: false,
-      });
+      expect(mockAlertModel.deleteOne).toHaveBeenCalledWith({ _id: alertId });
+      expect(mockExec).toHaveBeenCalled();
     });
   });
 });

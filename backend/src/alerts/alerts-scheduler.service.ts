@@ -2,8 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { AlertsService } from "./alerts.service";
 import { EmailService } from "./email.service";
+import { UserService } from "../user/user.service";
+import { Auth0Service } from "../auth/auth0.service";
 import { CryptoService } from "../crypto/crypto.service";
-import { AuthService } from "../auth/auth.service";
 
 @Injectable()
 export class AlertsSchedulerService {
@@ -12,11 +13,12 @@ export class AlertsSchedulerService {
   constructor(
     private alertsService: AlertsService,
     private emailService: EmailService,
+    private userService: UserService,
+    private auth0Service: Auth0Service,
     private cryptoService: CryptoService,
-    private authService: AuthService,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE) // Check every minute
+  @Cron(CronExpression.EVERY_MINUTE)
   async checkPriceAlerts() {
     this.logger.log("Checking price alerts...");
 
@@ -28,67 +30,63 @@ export class AlertsSchedulerService {
         return;
       }
 
-      // Group alerts by coinId to minimize API calls
-      const alertsByCoin = new Map<number, typeof activeAlerts>();
-      for (const alert of activeAlerts) {
-        if (!alertsByCoin.has(alert.coinId)) {
-          alertsByCoin.set(alert.coinId, []);
-        }
-        alertsByCoin.get(alert.coinId)!.push(alert);
-      }
 
-      // Get prices for all coins at once
-      const coinIds = Array.from(alertsByCoin.keys());
-      const prices = await this.cryptoService.getCurrentPrices(coinIds);
+      // Fetch market data from CryptoService (with cache)
+      const marketData = await this.cryptoService.getTopCoins(250, 1);
+      const priceMap = new Map(marketData.map(coin => [coin.coinId, coin.current_price]));
 
       // Check each alert
       for (const alert of activeAlerts) {
-        const currentPrice = prices[alert.coinId];
+        const currentPrice = priceMap.get(alert.coinId);
         if (!currentPrice) {
           this.logger.warn(`No price found for coin ${alert.coinId}`);
           continue;
         }
 
-        let shouldTrigger = false;
-        if (alert.condition === "above" && currentPrice >= alert.targetPrice) {
-          shouldTrigger = true;
-        } else if (alert.condition === "below" && currentPrice <= alert.targetPrice) {
-          shouldTrigger = true;
-        }
+        const shouldTrigger =
+          (alert.condition === "above" && currentPrice >= alert.targetPrice) ||
+          (alert.condition === "below" && currentPrice <= alert.targetPrice);
 
         if (shouldTrigger) {
-          this.logger.log(
-            `Alert triggered for ${alert.coinName}: ${currentPrice} ${alert.condition} ${alert.targetPrice}`,
-          );
+          this.logger.log(`Alert triggered for ${alert.coinId}: ${currentPrice} ${alert.condition} ${alert.targetPrice}`);
 
-          // Get user info from Supabase
           try {
-            // Get user email from Supabase using userId
-            const { data: userData, error } = await this.authService
-              .getSupabaseAdmin()
-              .auth.admin.getUserById(alert.userId);
+            // Try to get user email from our database first
+            const user = await this.userService.getUser(alert.userId);
+            let userEmail = user?.email;
 
-            if (error || !userData?.user?.email) {
-              this.logger.error(`Failed to get user email for userId ${alert.userId}`);
+            // If email not in database, fallback to Auth0 API (for Google OAuth users or legacy users)
+            if (!userEmail) {
+              this.logger.log(`Email not in database for userId ${alert.userId}, fetching from Auth0...`);
+              try {
+                const auth0User = await this.auth0Service.getUserById(alert.userId);
+                userEmail = auth0User.email;
+
+                // Save email to database for future use
+                if (userEmail) {
+                  await this.userService.upsertUser(alert.userId, userEmail);
+                  this.logger.log(`Email saved to database for userId ${alert.userId}`);
+                }
+              } catch (auth0Error: unknown) {
+                this.logger.error(`Failed to get email from Auth0 for userId ${alert.userId}:`, auth0Error);
+              }
+            }
+
+            if (!userEmail) {
+              this.logger.error(`No email found for userId ${alert.userId} in both database and Auth0`);
               continue;
             }
 
-            // Send email
-            await this.emailService.sendPriceAlert(
-              userData.user.email,
-              alert,
-              currentPrice,
-            );
+            await this.emailService.sendPriceAlert(userEmail, alert, currentPrice);
 
-            // Delete the alert after triggering
-            await this.alertsService.disableAlert(alert.id);
-            this.logger.log(`Alert ${alert.id} deleted after triggering`);
-          } catch (error) {
-            this.logger.error(`Failed to process alert ${alert.id}:`, error);
+            await this.alertsService.markAsTriggered((alert as any)._id.toString(), currentPrice);
+            this.logger.log(`Alert ${(alert as any)._id} marked as triggered`);
+          } catch (error: unknown) {
+            this.logger.error(`Failed to process alert ${(alert as any)._id}:`, error);
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error("Error checking price alerts:", error);
     }
   }

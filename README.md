@@ -17,6 +17,7 @@ crypto-tracking/
 ### Prerequisites
 - Node.js 18+ installed
 - npm or yarn package manager
+- MongoDB installed and running (see [MONGODB_SETUP.md](./MONGODB_SETUP.md))
 
 ### 1. Install Dependencies
 ```bash
@@ -32,22 +33,33 @@ npm run install:backend
 
 **Frontend (.env.local):**
 ```env
-# Supabase Config
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-
 # Backend API URL
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
 **Backend (.env):**
 ```env
-# Database
-SUPABASE_URL=your-supabase-url
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Auth0 Configuration
+AUTH0_DOMAIN=your-auth0-domain.auth0.com
+AUTH0_CLIENT_ID=your_client_id
+AUTH0_CLIENT_SECRET=your_client_secret
+AUTH0_AUDIENCE=https://your-auth0-domain.auth0.com/api/v2/
+AUTH0_CALLBACK_URL=http://localhost:3001/api/auth/callback
+
+# MongoDB Database
+# For local: mongodb://localhost:27017/crypto-tracking
+# For Atlas: mongodb+srv://<user>:<pass>@cluster.mongodb.net/crypto-tracking
+MONGODB_URI=mongodb://localhost:27017/crypto-tracking
 
 # APIs
 COINMARKETCAP_API_KEY=your-coinmarketcap-key
+GROQ_API_KEY=your-groq-api-key
+HUGGINGFACE_API_KEY=your-huggingface-api-key
+PINECONE_API_KEY=your-pinecone-api-key
+
+# Email
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-app-password
 
 # CORS
 FRONTEND_URL=http://localhost:3000
@@ -87,14 +99,14 @@ npm run start
 ### Frontend (Next.js)
 - 🎨 Modern React UI with Tailwind CSS
 - 📱 Responsive design
-- 🔐 Authentication with Supabase
+- 🔐 Authentication with Auth0
 - 📊 Interactive charts and data visualization
 - 🌙 Dark/Light theme support
 
 ### Backend (NestJS)
 - 🏗️ Simple modular architecture with TypeScript
 - 📡 RESTful API endpoints
-- 🔒 JWT authentication with Supabase
+- 🔒 JWT authentication with Auth0
 - 📊 Real-time crypto data from CoinMarketCap
 - 🛡️ Input validation with Zod
 
@@ -123,14 +135,14 @@ POST /api/auth/forgot-password       # Password reset
 - **Styling:** Tailwind CSS
 - **Forms:** React Hook Form + Zod
 - **Charts:** Recharts
-- **Authentication:** Supabase Auth
+- **Authentication:** Auth0
 
 ### Backend
 - **Framework:** NestJS
 - **Language:** TypeScript
-- **Database:** Supabase (PostgreSQL)
+- **Database:** MongoDB (with Mongoose)
 - **Validation:** Zod
-- **Authentication:** JWT + Passport
+- **Authentication:** JWT + Auth0
 - **APIs:** CoinMarketCap
 
 ## 📚 Documentation
@@ -156,5 +168,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [CoinGecko API](https://coingecko.com/api) for free crypto data
 - [Google Gemini AI](https://ai.google.dev) for chatbot intelligence
-- [Supabase](https://supabase.com) for authentication and database
+- [Auth0](https://auth0.com) for authentication
 - [Next.js](https://nextjs.org) and [NestJS](https://nestjs.com) teams

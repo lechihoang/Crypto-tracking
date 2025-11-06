@@ -30,7 +30,7 @@ interface CoinDetailContentProps {
 }
 
 export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetailContentProps) {
-  const priceChange24h = coin.quote.USD.percent_change_24h;
+  const priceChange24h = coin.quote?.USD.percent_change_24h || 0;
   const isPositive = priceChange24h >= 0;
 
   return (
@@ -42,7 +42,7 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-4xl font-bold text-gray-900">
-                  {formatPrice(coin.quote.USD.price)}
+                  {formatPrice(coin.quote?.USD.price || 0)}
                 </h2>
                 <div className={`flex items-center gap-2 mt-3 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                   {isPositive ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
@@ -54,38 +54,38 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-700">Xếp hạng</p>
-                <p className="text-2xl font-bold text-blue-600">#{coin.cmc_rank}</p>
+                <p className="text-2xl font-bold text-blue-600">#{coin.cmc_rank || coin.market_cap_rank}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-700">Thay đổi 1h</p>
-                <p className={`font-semibold ${coin.quote.USD.percent_change_1h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {coin.quote.USD.percent_change_1h >= 0 ? '+' : ''}{coin.quote.USD.percent_change_1h.toFixed(2)}%
+                <p className={`font-semibold ${(coin.quote?.USD.percent_change_1h || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(coin.quote?.USD.percent_change_1h || 0) >= 0 ? '+' : ''}{(coin.quote?.USD.percent_change_1h || 0).toFixed(2)}%
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-700">Thay đổi 7 ngày</p>
-                <p className={`font-semibold ${coin.quote.USD.percent_change_7d >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {coin.quote.USD.percent_change_7d >= 0 ? '+' : ''}{coin.quote.USD.percent_change_7d.toFixed(2)}%
+                <p className={`font-semibold ${(coin.quote?.USD.percent_change_7d || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(coin.quote?.USD.percent_change_7d || 0) >= 0 ? '+' : ''}{(coin.quote?.USD.percent_change_7d || 0).toFixed(2)}%
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-700">Thay đổi 30 ngày</p>
-                <p className={`font-semibold ${coin.quote.USD.percent_change_30d >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {coin.quote.USD.percent_change_30d >= 0 ? '+' : ''}{coin.quote.USD.percent_change_30d.toFixed(2)}%
+                <p className={`font-semibold ${(coin.quote?.USD.percent_change_30d || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(coin.quote?.USD.percent_change_30d || 0) >= 0 ? '+' : ''}{(coin.quote?.USD.percent_change_30d || 0).toFixed(2)}%
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-700">Khối lượng 24h</p>
-                <p className="font-semibold text-gray-900">{formatMarketCap(coin.quote.USD.volume_24h)}</p>
+                <p className="font-semibold text-gray-900">{formatMarketCap(coin.quote?.USD.volume_24h || 0)}</p>
               </div>
             </div>
           </div>
 
           {/* Price Chart */}
-          <PriceChart symbol={coin.symbol} currentPrice={coin.quote.USD.price} coinId={coinId} />
+          <PriceChart symbol={coin.symbol} currentPrice={coin.quote?.USD.price || 0} coinId={coinId} />
         </div>
 
         {/* Coin Info Sidebar */}
@@ -96,11 +96,11 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-700">Vốn hóa thị trường</span>
-                <span className="font-semibold text-gray-900">{formatMarketCap(coin.quote.USD.market_cap)}</span>
+                <span className="font-semibold text-gray-900">{formatMarketCap(coin.quote?.USD.market_cap || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Nguồn cung lưu hành</span>
-                <span className="font-semibold text-gray-900">{formatSupply(coin.circulating_supply)} {coin.symbol}</span>
+                <span className="font-semibold text-gray-900">{formatSupply(coin.circulating_supply || 0)} {coin.symbol}</span>
               </div>
               {coin.total_supply && (
                 <div className="flex justify-between">
@@ -139,11 +139,11 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
                   <p className="text-sm font-medium text-gray-700 mb-2">Nhãn</p>
                   <div className="flex flex-wrap gap-2">
                     {coinInfo.tags.slice(0, 6).map((tag, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
                       >
-                        {tag}
+                        {String(tag)}
                       </span>
                     ))}
                   </div>

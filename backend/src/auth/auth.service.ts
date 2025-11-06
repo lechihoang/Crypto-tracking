@@ -2,8 +2,11 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
-import { SupabaseService } from "./supabase.service";
+import { Auth0Service } from "./auth0.service";
+import { UserService } from "../user/user.service";
 import {
   SignUpDto,
   SignInDto,
@@ -14,90 +17,119 @@ import {
 
 @Injectable()
 export class AuthService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private auth0Service: Auth0Service,
+    @Inject(forwardRef(() => UserService))
+    private userService: UserService,
+  ) {}
 
   async signUp(signUpDto: SignUpDto) {
     const { email, password, fullName } = signUpDto;
-    const supabase = this.supabaseService.getAnonClient();
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      const user = await this.auth0Service.signUp(email, password, fullName);
+      const userId = (user as any)._id || (user as any).user_id;
+
+      // Save user email to database for future use (e.g., price alerts)
+      if (userId && email) {
+        await this.userService.upsertUser(userId, email, fullName);
+      }
+
+      return {
+        user: {
+          id: userId,
+          email: (user as any).email,
+          user_metadata: { full_name: fullName },
         },
-      },
-    });
-
-    if (error) {
-      if (error.message.includes("already registered")) {
+        message: "Please check your email to confirm your account",
+      };
+    } catch (error: any) {
+      if (error.message?.includes("already exists")) {
         throw new ConflictException("User already exists");
       }
-      throw new UnauthorizedException(error.message);
+      throw new UnauthorizedException(error.message || "Failed to sign up");
     }
-
-    return {
-      user: data.user,
-      message: "Please check your email to confirm your account",
-    };
   }
 
   async signIn(signInDto: SignInDto) {
     const { email, password } = signInDto;
-    const supabase = this.supabaseService.getAnonClient();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      console.log("Step 1: Signing in with password...");
+      const tokens = await this.auth0Service.signInWithPassword(
+        email,
+        password,
+      );
+      console.log("Step 1 successful, tokens received");
 
-    if (error) {
+      // Get user info from access token
+      console.log("Step 2: Getting user by token...");
+      const user = await this.auth0Service.getUserByToken(
+        tokens.access_token,
+      );
+      console.log("Step 2 successful, user:", {
+        id: user.user_id,
+        email: user.email,
+      });
+
+      // Save/update user email in database for future use (e.g., price alerts)
+      if (user.user_id && user.email) {
+        await this.userService.upsertUser(user.user_id, user.email, user.name);
+      }
+
+      const result = {
+        user: {
+          id: user.user_id,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+        },
+        session: {
+          access_token: tokens.access_token,
+          id_token: tokens.id_token,
+          token_type: tokens.token_type,
+          expires_in: tokens.expires_in,
+        },
+      };
+
+      console.log("Returning result with user and session");
+      return result;
+    } catch (error: any) {
+      console.error("SignIn error:", error.message || error);
       throw new UnauthorizedException("Invalid credentials");
     }
-
-    return {
-      user: data.user,
-      session: data.session,
-    };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { email } = resetPasswordDto;
-    const supabase = this.supabaseService.getAnonClient();
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL}/auth/reset-password`,
-    });
-
-    if (error) {
-      throw new UnauthorizedException(error.message);
+    try {
+      return await this.auth0Service.sendPasswordResetEmail(email);
+    } catch (error: any) {
+      throw new UnauthorizedException(
+        error.message || "Failed to send password reset email",
+      );
     }
-
-    return {
-      message: "Password reset email sent",
-    };
   }
 
   async updatePassword(updatePasswordDto: UpdatePasswordDto) {
     const { password, accessToken } = updatePasswordDto;
-    const supabase = this.supabaseService.getAnonClient();
 
-    // Set session first
-    await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: "", // You may need to store refresh token
-    });
+    try {
+      // Verify token and get user
+      const user = await this.auth0Service.getUserByToken(accessToken);
 
-    const { error } = await supabase.auth.updateUser({ password });
+      // Update password
+      await this.auth0Service.updatePassword(user.user_id, password);
 
-    if (error) {
-      throw new UnauthorizedException(error.message);
+      return {
+        message: "Password updated successfully",
+      };
+    } catch (error: any) {
+      throw new UnauthorizedException(
+        error.message || "Invalid or expired reset link",
+      );
     }
-
-    return {
-      message: "Password updated successfully",
-    };
   }
 
   async changePassword(
@@ -105,54 +137,79 @@ export class AuthService {
     accessToken: string,
   ) {
     const { currentPassword, newPassword } = changePasswordDto;
-    const supabase = this.supabaseService.getAnonClient();
 
-    // First, verify the current password by attempting to sign in
-    const { data: user } = await supabase.auth.getUser(accessToken);
-    if (!user?.user?.email) {
-      throw new UnauthorizedException("Invalid token");
+    try {
+      // Get user from token
+      const user = await this.auth0Service.getUserByToken(accessToken);
+
+      if (!user?.email) {
+        throw new UnauthorizedException("Invalid token");
+      }
+
+      // Verify current password by attempting to sign in
+      try {
+        await this.auth0Service.signInWithPassword(
+          user.email,
+          currentPassword,
+        );
+      } catch {
+        throw new UnauthorizedException("Current password is incorrect");
+      }
+
+      // Update to new password
+      await this.auth0Service.updatePassword(user.user_id, newPassword);
+
+      return {
+        message: "Password changed successfully",
+      };
+    } catch (error: any) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException(
+        error.message || "Failed to change password",
+      );
     }
-
-    // Verify current password
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.user.email,
-      password: currentPassword,
-    });
-
-    if (signInError) {
-      throw new UnauthorizedException("Current password is incorrect");
-    }
-
-    // Update to new password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      throw new UnauthorizedException(updateError.message);
-    }
-
-    return {
-      message: "Password changed successfully",
-    };
   }
 
   async getUser(accessToken: string) {
-    const supabase = this.supabaseService.getAnonClient();
+    try {
+      const user = await this.auth0Service.getUserByToken(accessToken);
 
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser(accessToken);
-
-    if (error || !user) {
+      return {
+        id: user.user_id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        email_verified: user.email_verified,
+      };
+    } catch (error: any) {
       throw new UnauthorizedException("Invalid token");
     }
-
-    return user;
   }
 
-  getSupabaseAdmin() {
-    return this.supabaseService.getAdminClient();
+  async logout(accessToken: string) {
+    try {
+      // Clear the cached user info for this token
+      this.auth0Service.clearUserCache(accessToken);
+
+      return {
+        message: "Logged out successfully",
+      };
+    } catch (error: any) {
+      // Even if there's an error, we still want to indicate success
+      // because logout should always succeed from the client's perspective
+      return {
+        message: "Logged out successfully",
+      };
+    }
+  }
+
+  getAuth0Management() {
+    return this.auth0Service.getManagementClient();
+  }
+
+  getAuth0Authentication() {
+    return this.auth0Service.getAuthenticationClient();
   }
 }

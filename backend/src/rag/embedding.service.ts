@@ -5,7 +5,7 @@ import axios from "axios";
 @Injectable()
 export class EmbeddingService {
   private readonly huggingFaceApiKey: string;
-  private readonly huggingFaceBaseUrl = "https://api-inference.huggingface.co";
+  private readonly huggingFaceBaseUrl = "https://router.huggingface.co/hf-inference";
   private readonly modelName = "BAAI/bge-small-en-v1.5";
   private readonly embeddingDimension = 384; // bge-small-en-v1.5 dimensions
 
@@ -19,7 +19,7 @@ export class EmbeddingService {
       // Clean and truncate text to avoid API limits
       const cleanText = this.cleanText(text);
 
-      const response = await axios.post(
+      const response = await axios.post<number[] | number[][]>(
         `${this.huggingFaceBaseUrl}/models/${this.modelName}`,
         {
           inputs: cleanText, // Single text string
@@ -38,7 +38,7 @@ export class EmbeddingService {
       );
 
       // HuggingFace returns embedding as nested array
-      const embedding = response.data;
+      const embedding: number[] | number[][] = response.data;
 
       if (!Array.isArray(embedding)) {
         throw new Error("Invalid embedding response from HuggingFace");
@@ -49,39 +49,44 @@ export class EmbeddingService {
       if (Array.isArray(embedding[0])) {
         finalEmbedding = embedding[0];
       } else {
-        finalEmbedding = embedding;
+        finalEmbedding = embedding as number[];
       }
 
       // Validate embedding dimensions
-      if (!finalEmbedding || finalEmbedding.length !== this.embeddingDimension) {
+      if (
+        !finalEmbedding ||
+        finalEmbedding.length !== this.embeddingDimension
+      ) {
         throw new Error(
           `Expected ${this.embeddingDimension} dimensions, got ${finalEmbedding?.length || 0}`,
         );
       }
 
       return finalEmbedding;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Embedding service error:", error);
 
-      if (error.response?.status === 401) {
-        throw new HttpException(
-          "HuggingFace API authentication failed. Please check your API key.",
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new HttpException(
+            "HuggingFace API authentication failed. Please check your API key.",
+            HttpStatus.UNAUTHORIZED,
+          );
+        }
 
-      if (error.response?.status === 429) {
-        throw new HttpException(
-          "HuggingFace API rate limit exceeded. Please try again later.",
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
+        if (error.response?.status === 429) {
+          throw new HttpException(
+            "HuggingFace API rate limit exceeded. Please try again later.",
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
 
-      if (error.response?.status === 503) {
-        throw new HttpException(
-          "HuggingFace model is loading. Please wait and try again.",
-          HttpStatus.SERVICE_UNAVAILABLE,
-        );
+        if (error.response?.status === 503) {
+          throw new HttpException(
+            "HuggingFace model is loading. Please wait and try again.",
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
       }
 
       throw new HttpException(
@@ -110,17 +115,20 @@ export class EmbeddingService {
       }
 
       return results;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Batch embedding error:", error);
       throw error;
     }
   }
 
   private cleanText(text: string): string {
-    return text
-      .trim()
-      .replace(/\s+/g, " ") // Replace multiple whitespace with single space
-      .replace(/[^\w\s\-\.,!?;:()\[\]{}'"]/g, "") // Remove special characters except common punctuation
-      .substring(0, 500); // Truncate to 500 chars to stay within limits
+    return (
+      text
+        .trim()
+        .replace(/\s+/g, " ") // Replace multiple whitespace with single space
+        // eslint-disable-next-line no-useless-escape
+        .replace(/[^\w\s\-\.,!?;:()\[\]{}'"]/g, "") // Remove special characters except common punctuation
+        .substring(0, 500)
+    ); // Truncate to 500 chars to stay within limits
   }
 }

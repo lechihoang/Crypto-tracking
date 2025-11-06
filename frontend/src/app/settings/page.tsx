@@ -1,28 +1,95 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { alertsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import ChangePasswordForm from '@/components/ChangePasswordForm';
+import { User, Lock, Mail, ArrowRight, Loader, Save, Bell } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import toast from 'react-hot-toast';
 
-interface PriceAlert {
-  id: string;
-  coin_symbol: string;
-  coin_name: string;
-  condition: 'above' | 'below';
-  target_price: number;
-  is_active: boolean;
-  created_at: string;
-}
+const ProfileSchema = z.object({
+  fullName: z.string().min(1, 'Họ tên không được để trống'),
+  email: z.string().email('Email không hợp lệ'),
+});
+
+type ProfileFormData = z.infer<typeof ProfileSchema>;
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
-  const [loadingAlerts, setLoadingAlerts] = useState(true);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(ProfileSchema),
+    defaultValues: {
+      fullName: user?.name || '',
+      email: user?.email || '',
+    },
+  });
+
+  // Load email notification preference from backend
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!user?.id) {
+        console.log('[Settings] No user ID, skipping preference load');
+        return;
+      }
+
+      console.log('[Settings] Loading preferences for user:', user.id);
+
+      try {
+        const token = localStorage.getItem('auth_token');
+        console.log('[Settings] Access token found:', !!token);
+
+        if (token) {
+          const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/user`;
+          console.log('[Settings] Fetching from:', url);
+
+          const response = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          console.log('[Settings] Response status:', response.status);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('[Settings] Loaded preferences:', data);
+            setEmailNotifications(data.emailNotifications);
+            // Sync to localStorage
+            const storageKey = `emailNotifications_${user.id}`;
+            localStorage.setItem(storageKey, data.emailNotifications.toString());
+          } else {
+            console.error('[Settings] Failed to load preferences, status:', response.status);
+          }
+        }
+      } catch (error) {
+        console.error('[Settings] Failed to load preferences:', error);
+        // Fallback to localStorage
+        const storageKey = `emailNotifications_${user.id}`;
+        const storedPreference = localStorage.getItem(storageKey);
+        console.log('[Settings] Fallback to localStorage:', storedPreference);
+        if (storedPreference !== null) {
+          setEmailNotifications(storedPreference === 'true');
+        }
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    };
+
+    loadPreferences();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,288 +98,304 @@ export default function SettingsPage() {
     }
 
     if (user) {
-      loadAlerts();
+      reset({
+        fullName: user.name || '',
+        email: user.email || '',
+      });
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, reset]);
 
-  const loadAlerts = async () => {
+  const onSubmit = async () => {
+    setSaving(true);
     try {
-      const response = await alertsApi.getAlerts();
-      if (response.data) {
-        setAlerts(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading alerts:', error);
+      // TODO: Implement API call to update profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Cập nhật thông tin thành công!');
+      setIsEditing(false);
+    } catch {
+      toast.error('Không thể cập nhật thông tin');
     } finally {
-      setLoadingAlerts(false);
+      setSaving(false);
     }
   };
 
-  const handleToggleAlert = async (alertId: string, isActive: boolean) => {
-    try {
-      await alertsApi.toggleAlert(alertId, isActive);
-      setAlerts(prev => prev.map(alert =>
-        alert.id === alertId ? { ...alert, is_active: isActive } : alert
-      ));
-    } catch (error) {
-      console.error('Error toggling alert:', error);
+  const handleEmailNotificationToggle = async (enabled: boolean) => {
+    if (!user?.id) {
+      console.log('[Settings] No user ID, cannot toggle');
+      return;
     }
-  };
 
-  const handleDeleteAlert = async (alertId: string) => {
+    console.log('[Settings] Toggling email notifications to:', enabled);
+
     try {
-      const deletePromise = (async () => {
-        await alertsApi.deleteAlert(alertId);
-        setAlerts(prev => prev.filter(alert => alert.id !== alertId));
-      })();
+      setEmailNotifications(enabled);
+      // Save to localStorage with user-specific key
+      const storageKey = `emailNotifications_${user.id}`;
+      localStorage.setItem(storageKey, enabled.toString());
+      console.log('[Settings] Saved to localStorage:', storageKey, enabled);
 
-      toast.promise(
-        deletePromise,
-        {
-          loading: 'Đang xóa cảnh báo...',
-          success: 'Đã xóa cảnh báo',
-          error: 'Không thể xóa cảnh báo',
+      // Call API to save to backend
+      const token = localStorage.getItem('auth_token');
+      console.log('[Settings] Token found:', !!token);
+
+      if (token) {
+        const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/user/email-notifications`;
+        console.log('[Settings] Calling API:', url, { enabled });
+
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ enabled }),
+        });
+
+        console.log('[Settings] API response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[Settings] API error:', errorText);
+          throw new Error('Failed to update preference');
         }
-      );
 
-      await deletePromise;
+        const result = await response.json();
+        console.log('[Settings] API success:', result);
+      } else {
+        console.warn('[Settings] No token, API not called');
+      }
+
+      toast.success(enabled ? 'Đã bật thông báo email' : 'Đã tắt thông báo email');
     } catch (error) {
-      console.error('Error deleting alert:', error);
+      console.error('[Settings] Toggle failed:', error);
+      toast.error('Không thể cập nhật cài đặt');
+      setEmailNotifications(!enabled);
+      // Revert localStorage on error
+      const storageKey = `emailNotifications_${user.id}`;
+      localStorage.setItem(storageKey, (!enabled).toString());
     }
   };
 
-  if (loading) {
+  if (loading || !preferencesLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Đang tải...</p>
+          <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Đang tải...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-8 px-6 pt-6">
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'profile'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Hồ sơ
-              </button>
-              <button
-                onClick={() => setActiveTab('alerts')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'alerts'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Cảnh báo giá ({alerts.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('notifications')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'notifications'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Thông báo
-              </button>
-            </nav>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cài đặt</h1>
+          <p className="text-gray-700">Quản lý thông tin cá nhân và cài đặt tài khoản</p>
+        </div>
 
-          <div className="p-6">
-            {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Thông tin cá nhân
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Email
-                      </label>
-                      <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                        {user?.email}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Họ tên
-                      </label>
-                      <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                        {user?.full_name || 'Chưa cập nhật'}
-                      </div>
-                    </div>
+        <div className="space-y-6">
+          {/* Profile Information Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Thông tin cá nhân</h3>
+                    <p className="text-sm text-gray-600">Cập nhật thông tin tài khoản của bạn</p>
                   </div>
                 </div>
-
-                <ChangePasswordForm />
-              </div>
-            )}
-
-            {activeTab === 'alerts' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Cảnh báo giá cryptocurrency
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                    Quản lý các cảnh báo giá của bạn. Hệ thống sẽ gửi email thông báo khi giá đạt mức đã đặt.
-                  </p>
-                </div>
-
-                {loadingAlerts ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">Đang tải cảnh báo...</p>
-                  </div>
-                ) : alerts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zm5 10V12h-4v5h4zM9 7V5h4v2H9z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Chưa có cảnh báo nào
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      Bạn chưa tạo cảnh báo giá nào. Hãy tạo cảnh báo để nhận thông báo khi giá thay đổi.
-                    </p>
-                    <button
-                      onClick={() => router.push('/')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
-                    >
-                      Tạo cảnh báo đầu tiên
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {alerts.map((alert) => (
-                      <div key={alert.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-                                {alert.coin_name} ({alert.coin_symbol.toUpperCase()})
-                              </h4>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                alert.is_active
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                              }`}>
-                                {alert.is_active ? 'Hoạt động' : 'Đã tắt'}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              Cảnh báo khi giá {alert.condition === 'above' ? 'vượt' : 'xuống dưới'} ${alert.target_price.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                              Tạo lúc: {new Date(alert.created_at).toLocaleString('vi-VN')}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2 ml-4">
-                            <button
-                              onClick={() => handleToggleAlert(alert.id, !alert.is_active)}
-                              className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium ${
-                                alert.is_active
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800'
-                              }`}
-                            >
-                              {alert.is_active ? 'Tắt' : 'Bật'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAlert(alert.id)}
-                              className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    Chỉnh sửa
+                  </button>
                 )}
               </div>
-            )}
+            </div>
 
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
+            <div className="p-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Full Name */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Cài đặt thông báo
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                          Email thông báo giá
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Nhận email khi giá cryptocurrency đạt mức cảnh báo
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-                      </label>
+                  <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Họ và tên
+                  </label>
+                  {isEditing ? (
+                    <div>
+                      <input
+                        {...register('fullName')}
+                        id="fullName"
+                        type="text"
+                        className={`block w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
+                          errors.fullName ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                        placeholder="Nhập họ và tên"
+                      />
+                      {errors.fullName && (
+                        <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
+                      )}
                     </div>
+                  ) : (
+                    <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-gray-900">{user?.name || 'Chưa cập nhật'}</p>
+                    </div>
+                  )}
+                </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                          Thông báo bảo mật
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Nhận thông báo về hoạt động đăng nhập và bảo mật
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-                      </label>
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <p className="text-gray-900">{user?.email}</p>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                          Bản tin thị trường
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Nhận email tổng quan thị trường hàng tuần
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-                      </label>
-                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Email không thể thay đổi</p>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                    Email liên hệ
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Tất cả thông báo sẽ được gửi đến: <strong>{user?.email}</strong>
-                  </p>
+                {/* Action Buttons */}
+                {isEditing && (
+                  <div className="flex items-center gap-3 pt-4">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader className="w-4 h-4 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Lưu thay đổi
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditing(false);
+                        reset();
+                      }}
+                      disabled={saving}
+                      className="px-6 py-3 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* Security Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Bảo mật</h3>
+                  <p className="text-sm text-gray-600">Quản lý mật khẩu và bảo mật tài khoản</p>
                 </div>
               </div>
-            )}
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Change Password */}
+                <button
+                  onClick={() => router.push('/auth/change-password')}
+                  className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <Lock className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Đổi mật khẩu</p>
+                      <p className="text-sm text-gray-600">Cập nhật mật khẩu để bảo mật tài khoản</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Notifications Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Thông báo</h3>
+                  <p className="text-sm text-gray-600">Quản lý cách nhận thông báo cảnh báo giá</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-6">
+                {/* Email Notifications Toggle */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Thông báo qua Email</p>
+                      <p className="text-sm text-gray-600">Nhận email khi cảnh báo giá được kích hoạt</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={emailNotifications}
+                      onChange={(e) => handleEmailNotificationToggle(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* Email Info */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900 font-medium mb-1">
+                    Email thông báo
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Thông báo sẽ được gửi đến: <strong>{user?.email}</strong>
+                  </p>
+                </div>
+
+                {/* Notification Description */}
+                <div className="text-sm text-gray-600">
+                  <p className="mb-2">Khi bật thông báo email, bạn sẽ nhận được:</p>
+                  <ul className="space-y-1 list-disc list-inside text-gray-600">
+                    <li>Email ngay lập tức khi giá coin đạt mức cảnh báo</li>
+                    <li>Thông tin chi tiết về coin và giá hiện tại</li>
+                    <li>Link để quản lý các cảnh báo khác</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

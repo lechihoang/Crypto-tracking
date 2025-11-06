@@ -1,8 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
-import ChatWindow from './ChatWindow';
+
+// Lazy load ChatWindow
+const ChatWindow = dynamic(() => import('./ChatWindow'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  ),
+});
 
 export default function ChatBubble() {
   const [isOpen, setIsOpen] = useState(false);

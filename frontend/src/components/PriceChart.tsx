@@ -3,12 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { clientApi } from '@/lib/api';
-
-interface ChartData {
-  time: string;
-  price: number;
-  timestamp: number;
-}
+import LoadingSpinner from './LoadingSpinner';
+import { PriceChartData } from '@/types';
 
 interface PriceChartProps {
   symbol: string;
@@ -18,7 +14,7 @@ interface PriceChartProps {
 
 const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId }) => {
   const [timeframe, setTimeframe] = useState('7d');
-  const [data, setData] = useState<ChartData[]>([]);
+  const [data, setData] = useState<PriceChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +53,12 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
       const response = await clientApi.getCoinPriceHistory(coinId, days);
 
       if (response?.prices) {
-        const chartData: ChartData[] = response.prices.map((item: any) => ({
+        const PricechartData: PriceChartData[] = response.prices.map((item: { timestamp: number; price: number }) => ({
           time: formatTimeDisplay(item.timestamp, tf),
           price: item.price,
           timestamp: item.timestamp,
         }));
-        setData(chartData);
+        setData(PricechartData);
       } else {
         generateMockData(tf);
       }
@@ -78,7 +74,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
   // Fallback to mock data when real API fails
   const generateMockData = (tf: string) => {
     const days = getDaysFromTimeframe(tf);
-    const mockData: ChartData[] = [];
+    const mockData: PriceChartData[] = [];
     const now = new Date().getTime();
     const basePrice = currentPrice;
 
@@ -102,13 +98,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
 
   useEffect(() => {
     fetchPriceHistory(timeframe);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeframe, coinId]);
 
   if (loading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <div className="h-80 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+        <div className="h-80">
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     );

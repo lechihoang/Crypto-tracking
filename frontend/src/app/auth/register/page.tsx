@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { SignUpSchema, SignUpFormData } from '@/lib/validations';
-import { Mail, Lock, User, Eye, EyeOff, Loader, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader, CheckCircle } from 'lucide-react';
+import { FaGoogle } from 'react-icons/fa';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +24,7 @@ export default function RegisterPage() {
     getValues
   } = useForm<SignUpFormData>({
     resolver: zodResolver(SignUpSchema),
+    mode: 'onChange', // Validate on every change
     defaultValues: {
       fullName: '',
       email: '',
@@ -61,29 +63,29 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-lg w-full space-y-8">
+          <div className="bg-white rounded-xl shadow-sm p-10 border border-gray-200 text-center">
             <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Đăng ký thành công!
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-700 mb-6">
               Chúng tôi đã gửi email xác nhận đến <strong>{getValues('email')}</strong>.
               Vui lòng kiểm tra email và nhấp vào liên kết để kích hoạt tài khoản.
             </p>
             <div className="space-y-3">
               <Link
                 href="/auth/login"
-                className="w-full inline-flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                className="w-full inline-flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 Đăng nhập ngay
               </Link>
               <Link
                 href="/"
-                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                className="w-full inline-flex justify-center py-3 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
                 Quay về trang chủ
               </Link>
@@ -95,27 +97,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-lg w-full space-y-8">
+        <div className="bg-white rounded-xl shadow-sm p-10 border border-gray-200">
           {/* Header */}
-          <div className="text-center">
-            <Link
-              href="/"
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6 font-medium transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay về trang chủ
-            </Link>
-
-            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4">
-              <span className="text-white text-2xl font-bold">₿</span>
-            </div>
-
+          <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Tạo tài khoản
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-700">
               Tham gia Crypto Tracker để theo dõi danh mục của bạn
             </p>
           </div>
@@ -260,7 +250,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading || isSubmitting}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading || isSubmitting ? (
                 <Loader className="w-5 h-5 animate-spin" />
@@ -269,9 +259,29 @@ export default function RegisterPage() {
               )}
             </button>
 
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Hoặc đăng ký với</span>
+              </div>
+            </div>
+
+            {/* Social Login Button */}
+            <button
+              type="button"
+              onClick={() => authApi.loginWithGoogle()}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <FaGoogle className="w-5 h-5 mr-2 text-red-500" />
+              Google
+            </button>
+
             {/* Login Link */}
             <div className="text-center text-sm">
-              <span className="text-gray-600">Đã có tài khoản? </span>
+              <span className="text-gray-700">Đã có tài khoản? </span>
               <Link
                 href="/auth/login"
                 className="text-blue-600 hover:text-blue-700 font-medium"

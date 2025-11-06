@@ -2,20 +2,7 @@
 
 import React from 'react';
 import { AlertTriangle, Loader, X } from 'lucide-react';
-
-interface HoldingWithValue {
-  id: string;
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  quantity: number;
-  averageBuyPrice?: number;
-  notes?: string;
-  currentPrice: number;
-  currentValue: number;
-  profitLoss?: number;
-  profitLossPercentage?: number;
-}
+import { HoldingWithValue } from '@/types';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -97,7 +84,7 @@ export default function DeleteConfirmModal({
             </div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Giá trị hiện tại:</span>
-              <span className="font-medium">{formatCurrency(Number(holding.currentValue), true)}</span>
+              <span className="font-medium">{formatCurrency(Number(holding.currentPrice), true)}</span>
             </div>
             {holding.profitLoss !== undefined && (
               <div className="flex items-center justify-between">

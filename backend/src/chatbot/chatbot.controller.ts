@@ -5,8 +5,6 @@ import {
   Delete,
   Body,
   Query,
-  Headers,
-  HttpStatus,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ChatbotService } from "./chatbot.service";
@@ -18,13 +16,9 @@ export class ChatbotController {
 
   @Post("chat")
   async sendMessage(
-    @Body() body: any,
-    @Headers("authorization") authHeader?: string,
+    @Body() body: SendMessageDto & { userId?: string },
   ): Promise<ChatResponse> {
     console.log("[ChatBot Controller] Received request body:", body);
-
-    // Validate request body
-    const validatedData = SendMessageDto.parse(body);
 
     // Extract userId from request body (for logged-in users)
     const userId = body.userId;
@@ -33,12 +27,12 @@ export class ChatbotController {
       "[ChatBot Controller] Calling service with userId:",
       userId,
       "sessionId:",
-      validatedData.sessionId,
+      body.sessionId,
     );
 
     const result = await this.chatbotService.sendMessage(
-      validatedData.message,
-      validatedData.sessionId,
+      body.message,
+      body.sessionId,
       userId,
     );
 
@@ -71,10 +65,10 @@ export class ChatbotController {
       messages: messages
         .filter((msg) => msg.role !== "system") // Filter out system messages
         .map((msg) => ({
-          id: msg.id,
+          id: (msg as any)._id.toString(),
           content: msg.content,
           sender: msg.role === "user" ? "user" : "bot",
-          timestamp: msg.createdAt,
+          timestamp: (msg as any).createdAt,
         })),
     };
   }

@@ -5,7 +5,27 @@ import { ScrapedContent } from "./dto";
 @Injectable()
 export class ScraperService {
   private readonly coinGeckoBaseUrl = "https://api.coingecko.com/api/v3";
+  private readonly coinGeckoApiKey: string;
 
+  constructor() {
+    // Initialize CoinGecko API key
+    this.coinGeckoApiKey = process.env.COINGECKO_API_KEY || "";
+  }
+
+  /**
+   * Get headers for CoinGecko API requests with authentication
+   */
+  private getCoinGeckoHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (this.coinGeckoApiKey) {
+      headers["x-cg-demo-api-key"] = this.coinGeckoApiKey;
+    }
+
+    return headers;
+  }
 
   /**
    * Fetch all cryptocurrency categories with descriptions
@@ -18,14 +38,24 @@ export class ScraperService {
     const content: ScrapedContent[] = [];
 
     try {
-      const response = await axios.get(
+      interface CoinGeckoCategory {
+        id?: string;
+        name: string;
+        market_cap?: number;
+        market_cap_change_24h?: number;
+        volume_24h?: number;
+        top_3_coins?: string[];
+      }
+
+      const response = await axios.get<CoinGeckoCategory[]>(
         `${this.coinGeckoBaseUrl}/coins/categories`,
         {
+          headers: this.getCoinGeckoHeaders(),
           timeout: 10000,
-        }
+        },
       );
 
-      const categories = response.data;
+      const categories: CoinGeckoCategory[] = response.data;
       console.log(`[CoinGecko API] Found ${categories.length} categories`);
 
       for (const category of categories) {
@@ -38,7 +68,7 @@ export class ScraperService {
           }
 
           if (category.market_cap_change_24h) {
-            const change = category.market_cap_change_24h > 0 ? 'up' : 'down';
+            const change = category.market_cap_change_24h > 0 ? "up" : "down";
             categoryContent += `, ${change} ${Math.abs(category.market_cap_change_24h).toFixed(2)}% in the last 24 hours`;
           }
 
@@ -49,11 +79,13 @@ export class ScraperService {
           }
 
           if (category.top_3_coins && category.top_3_coins.length > 0) {
-            categoryContent += ` Top coins in this category include: ${category.top_3_coins.join(', ')}.`;
+            categoryContent += ` Top coins in this category include: ${category.top_3_coins.join(", ")}.`;
           }
 
           // Add general knowledge about common categories
-          const categoryKnowledge = this.getCategoryKnowledge(category.id || category.name);
+          const categoryKnowledge = this.getCategoryKnowledge(
+            category.id || category.name,
+          );
           if (categoryKnowledge) {
             categoryContent += ` ${categoryKnowledge}`;
           }
@@ -61,21 +93,29 @@ export class ScraperService {
           content.push({
             title: `What is ${category.name}?`,
             content: categoryContent,
-            url: `https://www.coingecko.com/en/categories/${category.id || category.name.toLowerCase().replace(/\s+/g, '-')}`,
+            url: `https://www.coingecko.com/en/categories/${category.id || category.name.toLowerCase().replace(/\s+/g, "-")}`,
             source: "CoinGecko API - Categories",
             publishedAt: new Date(),
           });
 
           console.log(`[CoinGecko API] ✓ Added category: ${category.name}`);
-        } catch (error) {
-          console.error(`[CoinGecko API] Error processing category:`, error.message);
+        } catch (error: unknown) {
+          console.error(
+            `[CoinGecko API] Error processing category:`,
+            error instanceof Error ? error.message : String(error),
+          );
         }
       }
 
-      console.log(`[CoinGecko API] Completed. ${content.length} categories added`);
+      console.log(
+        `[CoinGecko API] Completed. ${content.length} categories added`,
+      );
       return content;
-    } catch (error) {
-      console.error("[CoinGecko API] Categories error:", error.message);
+    } catch (error: unknown) {
+      console.error(
+        "[CoinGecko API] Categories error:",
+        error instanceof Error ? error.message : String(error),
+      );
       return [];
     }
   }
@@ -90,14 +130,32 @@ export class ScraperService {
     const content: ScrapedContent[] = [];
 
     try {
-      const response = await axios.get(
+      interface TrendingCoin {
+        id: string;
+        name: string;
+        symbol: string;
+        market_cap_rank?: number;
+        price_btc?: number;
+        data?: {
+          price_change_percentage_24h?: {
+            usd?: number;
+          };
+        };
+      }
+
+      interface TrendingResponse {
+        coins?: Array<{ item: TrendingCoin }>;
+      }
+
+      const response = await axios.get<TrendingResponse>(
         `${this.coinGeckoBaseUrl}/search/trending`,
         {
+          headers: this.getCoinGeckoHeaders(),
           timeout: 10000,
-        }
+        },
       );
 
-      const trending = response.data;
+      const trending: TrendingResponse = response.data;
       console.log(`[CoinGecko API] Found trending data`);
 
       // Process trending coins
@@ -119,7 +177,7 @@ export class ScraperService {
 
           if (coin.data?.price_change_percentage_24h) {
             const change = coin.data.price_change_percentage_24h.usd || 0;
-            const direction = change > 0 ? 'increased' : 'decreased';
+            const direction = change > 0 ? "increased" : "decreased";
             trendingContent += ` The price has ${direction} by ${Math.abs(change).toFixed(2)}% in the last 24 hours.`;
           }
 
@@ -135,10 +193,15 @@ export class ScraperService {
         }
       }
 
-      console.log(`[CoinGecko API] Completed. ${content.length} trending items added`);
+      console.log(
+        `[CoinGecko API] Completed. ${content.length} trending items added`,
+      );
       return content;
-    } catch (error) {
-      console.error("[CoinGecko API] Trending error:", error.message);
+    } catch (error: unknown) {
+      console.error(
+        "[CoinGecko API] Trending error:",
+        error instanceof Error ? error.message : String(error),
+      );
       return [];
     }
   }
@@ -153,14 +216,27 @@ export class ScraperService {
     const content: ScrapedContent[] = [];
 
     try {
-      const response = await axios.get(
+      interface GlobalData {
+        total_market_cap: { usd: number };
+        market_cap_change_percentage_24h_usd?: number;
+        total_volume?: { usd: number };
+        active_cryptocurrencies?: number;
+        markets?: number;
+        market_cap_percentage?: Record<string, number>;
+        defi_market_cap?: number;
+        defi_volume_24h?: number;
+        defi_to_total_market_cap?: number;
+      }
+
+      const response = await axios.get<{ data: GlobalData }>(
         `${this.coinGeckoBaseUrl}/global`,
         {
+          headers: this.getCoinGeckoHeaders(),
           timeout: 10000,
-        }
+        },
       );
 
-      const globalData = response.data.data;
+      const globalData: GlobalData = response.data.data;
       console.log(`[CoinGecko API] Received global market data`);
 
       // Overall market overview
@@ -168,7 +244,7 @@ export class ScraperService {
 
       if (globalData.market_cap_change_percentage_24h_usd) {
         const change = globalData.market_cap_change_percentage_24h_usd;
-        const direction = change > 0 ? 'up' : 'down';
+        const direction = change > 0 ? "up" : "down";
         marketOverview += `, ${direction} ${Math.abs(change).toFixed(2)}% in the last 24 hours`;
       }
 
@@ -200,8 +276,11 @@ export class ScraperService {
 
         const topDominance = Object.entries(globalData.market_cap_percentage)
           .slice(0, 5)
-          .map(([symbol, percentage]) => `${symbol.toUpperCase()}: ${(percentage as number).toFixed(2)}%`)
-          .join(', ');
+          .map(
+            ([symbol, percentage]) =>
+              `${symbol.toUpperCase()}: ${percentage.toFixed(2)}%`,
+          )
+          .join(", ");
 
         dominanceContent += `Currently, the top cryptocurrencies by market dominance are: ${topDominance}.`;
 
@@ -243,10 +322,15 @@ export class ScraperService {
         });
       }
 
-      console.log(`[CoinGecko API] Completed. ${content.length} global market insights added`);
+      console.log(
+        `[CoinGecko API] Completed. ${content.length} global market insights added`,
+      );
       return content;
-    } catch (error) {
-      console.error("[CoinGecko API] Global data error:", error.message);
+    } catch (error: unknown) {
+      console.error(
+        "[CoinGecko API] Global data error:",
+        error instanceof Error ? error.message : String(error),
+      );
       return [];
     }
   }
@@ -255,7 +339,7 @@ export class ScraperService {
    * Get all CoinGecko data at once
    * Combines coins, categories, trending, and global data
    */
-  async getAllCoinGeckoData(coinsLimit: number = 100): Promise<ScrapedContent[]> {
+  async getAllCoinGeckoData(): Promise<ScrapedContent[]> {
     console.log(`[CoinGecko API] Fetching ALL data...`);
 
     const allContent: ScrapedContent[] = [];
@@ -273,15 +357,20 @@ export class ScraperService {
       allContent.push(...trending);
       allContent.push(...global);
 
-      console.log(`[CoinGecko API] Total content collected: ${allContent.length} items`);
+      console.log(
+        `[CoinGecko API] Total content collected: ${allContent.length} items`,
+      );
       // console.log(`  - Coins: ${coins.length}`);
       console.log(`  - Categories: ${categories.length}`);
       console.log(`  - Trending: ${trending.length}`);
       console.log(`  - Global: ${global.length}`);
 
       return allContent;
-    } catch (error) {
-      console.error("[CoinGecko API] Error fetching all data:", error.message);
+    } catch (error: unknown) {
+      console.error(
+        "[CoinGecko API] Error fetching all data:",
+        error instanceof Error ? error.message : String(error),
+      );
       return allContent; // Return whatever we managed to fetch
     }
   }
@@ -291,18 +380,26 @@ export class ScraperService {
    */
   private getCategoryKnowledge(categoryId: string): string {
     const knowledge: Record<string, string> = {
-      'decentralized-finance-defi': 'DeFi enables financial services like lending, borrowing, and trading without traditional banks or intermediaries using smart contracts.',
-      'smart-contract-platform': 'Smart contract platforms allow developers to build decentralized applications (dApps) that execute automatically when conditions are met.',
-      'layer-1': 'Layer 1 blockchains are base-level networks that process and finalize transactions on their own blockchain, like Bitcoin and Ethereum.',
-      'layer-2': 'Layer 2 solutions are built on top of Layer 1 blockchains to improve scalability and reduce transaction costs.',
-      'nft': 'NFTs (Non-Fungible Tokens) are unique digital assets that represent ownership of specific items like art, collectibles, or virtual real estate.',
-      'gaming': 'Crypto gaming combines blockchain technology with video games, allowing players to truly own in-game assets and earn cryptocurrencies.',
-      'metaverse': 'The metaverse refers to virtual worlds where users can interact, socialize, and conduct business using cryptocurrencies and NFTs.',
-      'meme': 'Meme coins are cryptocurrencies inspired by internet memes or jokes, often driven by community enthusiasm and social media trends.',
-      'exchange-based-tokens': 'Exchange tokens are cryptocurrencies issued by crypto exchanges, often providing benefits like reduced trading fees.',
-      'stablecoins': 'Stablecoins are cryptocurrencies designed to maintain a stable value by being pegged to assets like the US dollar.',
+      "decentralized-finance-defi":
+        "DeFi enables financial services like lending, borrowing, and trading without traditional banks or intermediaries using smart contracts.",
+      "smart-contract-platform":
+        "Smart contract platforms allow developers to build decentralized applications (dApps) that execute automatically when conditions are met.",
+      "layer-1":
+        "Layer 1 blockchains are base-level networks that process and finalize transactions on their own blockchain, like Bitcoin and Ethereum.",
+      "layer-2":
+        "Layer 2 solutions are built on top of Layer 1 blockchains to improve scalability and reduce transaction costs.",
+      nft: "NFTs (Non-Fungible Tokens) are unique digital assets that represent ownership of specific items like art, collectibles, or virtual real estate.",
+      gaming:
+        "Crypto gaming combines blockchain technology with video games, allowing players to truly own in-game assets and earn cryptocurrencies.",
+      metaverse:
+        "The metaverse refers to virtual worlds where users can interact, socialize, and conduct business using cryptocurrencies and NFTs.",
+      meme: "Meme coins are cryptocurrencies inspired by internet memes or jokes, often driven by community enthusiasm and social media trends.",
+      "exchange-based-tokens":
+        "Exchange tokens are cryptocurrencies issued by crypto exchanges, often providing benefits like reduced trading fees.",
+      stablecoins:
+        "Stablecoins are cryptocurrencies designed to maintain a stable value by being pegged to assets like the US dollar.",
     };
 
-    return knowledge[categoryId] || '';
+    return knowledge[categoryId] || "";
   }
 }

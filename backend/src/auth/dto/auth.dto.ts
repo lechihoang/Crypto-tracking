@@ -1,11 +1,12 @@
 import { IsEmail, IsString, MinLength, IsOptional } from "class-validator";
+import { IsStrongPassword } from "../../common/decorators";
 
 export class SignUpDto {
   @IsEmail()
   email: string;
 
   @IsString()
-  @MinLength(6)
+  @IsStrongPassword()
   password: string;
 
   @IsOptional()
@@ -29,7 +30,7 @@ export class ResetPasswordDto {
 
 export class UpdatePasswordDto {
   @IsString()
-  @MinLength(6)
+  @IsStrongPassword()
   password: string;
 
   @IsString()
@@ -43,6 +44,6 @@ export class ChangePasswordDto {
   currentPassword: string;
 
   @IsString()
-  @MinLength(6)
+  @IsStrongPassword()
   newPassword: string;
 }

@@ -1,13 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
-import { PriceAlert } from "../entities";
+import { PriceAlert } from "../schemas";
+import { UserService } from "../user/user.service";
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(EmailService.name);
 
-  constructor() {
+  constructor(private userService: UserService) {
     this.transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -18,28 +19,44 @@ export class EmailService {
   }
 
   /**
+   * Capitalize coin name for display
+   */
+  private capitalizeCoinName(coinName: string): string {
+    return coinName.charAt(0).toUpperCase() + coinName.slice(1);
+  }
+
+  /**
    * Format target price by removing trailing zeros
    */
   private formatTargetPrice(price: number): string {
-    // Remove trailing zeros from decimal places
+    // Determine decimal places based on price range
+    let decimalPlaces: number;
     if (price < 0.01) {
-      return price.toFixed(8).replace(/\.?0+$/, '');
+      decimalPlaces = 8;
     } else if (price < 1) {
-      return price.toFixed(6).replace(/\.?0+$/, '');
+      decimalPlaces = 6;
     } else if (price < 100) {
-      return price.toFixed(4).replace(/\.?0+$/, '');
+      decimalPlaces = 4;
     } else {
-      return price.toFixed(2).replace(/\.?0+$/, '');
+      decimalPlaces = 2;
     }
+
+    // Format with locale for comma separators, then remove trailing zeros
+    const formatted = price.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimalPlaces,
+    });
+
+    return formatted;
   }
 
   /**
    * Format current price with full precision (2-8 decimal places)
    */
   private formatCurrentPrice(price: number): string {
-    return price.toLocaleString('en-US', {
+    return price.toLocaleString("en-US", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 8
+      maximumFractionDigits: 8,
     });
   }
 
@@ -48,14 +65,29 @@ export class EmailService {
     alert: PriceAlert,
     currentPrice: number,
   ): Promise<void> {
+    // Check if user has email notifications enabled
+    const isEnabled = await this.userService.isEmailNotificationEnabled(
+      alert.userId,
+    );
+
+    if (!isEnabled) {
+      this.logger.log(
+        `Email notification skipped for user ${alert.userId} - notifications disabled`,
+      );
+      return;
+    }
+
     const condition = alert.condition === "above" ? "vượt lên" : "giảm xuống";
-    const formattedTargetPrice = this.formatTargetPrice(Number(alert.targetPrice));
+    const formattedTargetPrice = this.formatTargetPrice(
+      Number(alert.targetPrice),
+    );
     const formattedCurrentPrice = this.formatCurrentPrice(currentPrice);
+    const displayName = this.capitalizeCoinName(alert.coinId);
 
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: userEmail,
-      subject: `🔔 Cảnh báo giá ${alert.coinName} (${alert.coinSymbol})`,
+      subject: `🔔 Cảnh báo giá ${displayName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
@@ -63,14 +95,14 @@ export class EmailService {
           </div>
 
           <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #1f2937; margin-top: 0;">Giá ${alert.coinName} đã ${condition} mức đặt!</h2>
+            <h2 style="color: #1f2937; margin-top: 0;">Giá ${displayName} đã ${condition} mức đặt!</h2>
 
             <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 10px 0; color: #6b7280;">Đồng coin:</td>
                   <td style="padding: 10px 0; font-weight: bold; color: #1f2937; text-align: right;">
-                    ${alert.coinName} (${alert.coinSymbol.toUpperCase()})
+                    ${displayName}
                   </td>
                 </tr>
                 <tr>
@@ -118,8 +150,10 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Price alert email sent to ${userEmail} for ${alert.coinName}`);
-    } catch (error) {
+      this.logger.log(
+        `Price alert email sent to ${userEmail} for ${alert.coinId}`,
+      );
+    } catch (error: unknown) {
       this.logger.error(`Failed to send email to ${userEmail}:`, error);
       throw error;
     }

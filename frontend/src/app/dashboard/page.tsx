@@ -2,39 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import DashboardStats from '@/components/DashboardStats';
 import DashboardPortfolio from '@/components/DashboardPortfolio';
 import DashboardAlerts from '@/components/DashboardAlerts';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { portfolioApi, alertsApi, clientApi } from '@/lib/api';
+import { PriceAlert, PortfolioValue } from '@/types';
 import { Wallet, BarChart3, AlertCircle } from 'lucide-react';
 
-interface HoldingData {
-  holding: {
-    id: string;
-    coinId: string;
-    coinSymbol: string;
-    coinName: string;
-    coinImage?: string;
-    quantity: number;
-    averageBuyPrice?: number;
-  };
-  currentPrice: number;
-  currentValue: number;
-  profitLoss?: number;
-}
-
-interface Alert {
-  id: string;
-  coinId: number;
-  coinSymbol: string;
-  coinName: string;
-  coinImage?: string;
-  condition: 'above' | 'below';
-  targetPrice: number;
-  isActive: boolean;
-  createdAt: string;
-}
+// Type alias for holdings from PortfolioValue
+type HoldingData = PortfolioValue['holdings'][number];
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -50,8 +28,8 @@ export default function DashboardPage() {
     profitLossPercentage: number;
     benchmark: { value: number; setAt: string } | null;
   } | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [, setStatsLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,7 +60,9 @@ export default function DashboardPage() {
         const coinsResult = await clientApi.getLatestListings(100);
         if (coinsResult.data) {
           coinImageMap = new Map(
-            coinsResult.data.map((coin: any) => [coin.slug, coin.image])
+            coinsResult.data
+              .filter(coin => coin.image)
+              .map(coin => [coin.slug, coin.image!])
           );
         }
       } catch (error) {
@@ -110,15 +90,23 @@ export default function DashboardPage() {
       }
 
       // Process benchmark data
-      if (benchmarkResult.data) {
-        setBenchmarkData(benchmarkResult.data as any);
+      if (benchmarkResult.data && typeof benchmarkResult.data === 'object') {
+        const bData = benchmarkResult.data as { benchmarkValue?: number; currentValue?: number; profitLoss?: number; profitLossPercentage?: number; benchmark?: { value: number; setAt: string } };
+
+        if (bData.profitLoss !== undefined || bData.benchmark) {
+          setBenchmarkData({
+            profitLoss: bData.profitLoss || 0,
+            profitLossPercentage: bData.profitLossPercentage || 0,
+            benchmark: bData.benchmark || null,
+          });
+        }
       }
 
       // Process alerts data with coin images
       if (alertsResult.data) {
-        const alertsWithImages = alertsResult.data.map((alert: Alert) => ({
+        const alertsWithImages = alertsResult.data.map((alert) => ({
           ...alert,
-          coinImage: alert.coinImage || coinImageMap.get(alert.coinId.toString())
+          coinImage: alert.coinImage || coinImageMap.get(alert.coinId)
         }));
         setAlerts(alertsWithImages);
       }
@@ -183,11 +171,7 @@ export default function DashboardPage() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen size="xl" />;
   }
 
   if (!user) return null;
@@ -198,7 +182,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Chào mừng, {user?.full_name || user?.email?.split('@')[0]}!
+            Chào mừng, {user?.name || user?.email?.split('@')[0]}!
           </h1>
           <p className="text-gray-600">Quản lý danh mục đầu tư crypto của bạn</p>
         </div>
@@ -217,6 +201,7 @@ export default function DashboardPage() {
           <DashboardAlerts
             alerts={alerts}
             onDeleteAlert={handleDeleteAlert}
+            onAlertCreated={fetchDashboardData}
           />
         </div>
       </div>

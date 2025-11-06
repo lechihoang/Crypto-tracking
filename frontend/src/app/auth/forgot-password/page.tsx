@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { ForgotPasswordSchema, ForgotPasswordFormData } from '@/lib/validations';
-import { Mail, Loader, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Loader, CheckCircle } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
       } else {
         setSuccess(true);
       }
-    } catch (err) {
+    } catch {
       setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -52,29 +52,29 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200 text-center">
             <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Email đã được gửi!
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-700 mb-6">
               Chúng tôi đã gửi liên kết đặt lại mật khẩu đến <strong>{getValues('email')}</strong>.
               Vui lòng kiểm tra email và làm theo hướng dẫn.
             </p>
             <div className="space-y-3">
               <Link
                 href="/auth/login"
-                className="w-full inline-flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                className="w-full inline-flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
               >
                 Quay về đăng nhập
               </Link>
               <button
                 onClick={() => setSuccess(false)}
-                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                className="w-full inline-flex justify-center py-3 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
                 Gửi lại email
               </button>
@@ -86,27 +86,15 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200">
           {/* Header */}
-          <div className="text-center">
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6 font-medium transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay về đăng nhập
-            </Link>
-
-            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4">
-              <Mail className="h-8 w-8 text-white" />
-            </div>
-
+          <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Quên mật khẩu?
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-700">
               Nhập email của bạn để nhận liên kết đặt lại mật khẩu
             </p>
           </div>
@@ -148,7 +136,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading || isSubmitting}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading || isSubmitting ? (
                 <Loader className="w-5 h-5 animate-spin" />
@@ -159,7 +147,7 @@ export default function ForgotPasswordPage() {
 
             {/* Back to Login */}
             <div className="text-center text-sm">
-              <span className="text-gray-600">Nhớ mật khẩu? </span>
+              <span className="text-gray-700">Nhớ mật khẩu? </span>
               <Link
                 href="/auth/login"
                 className="text-blue-600 hover:text-blue-700 font-medium"

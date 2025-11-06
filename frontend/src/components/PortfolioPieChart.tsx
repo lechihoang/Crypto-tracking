@@ -1,19 +1,9 @@
 'use client';
 
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import React, { useMemo, useCallback } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
-interface HoldingWithValue {
-  id: string;
-  coinId: string;
-  coinSymbol: string;
-  coinName: string;
-  quantity: number;
-  currentPrice: number;
-  currentValue: number;
-  profitLoss?: number;
-  profitLossPercentage?: number;
-}
+import { HoldingWithValue } from '@/types';
 
 interface PortfolioPieChartProps {
   holdings: HoldingWithValue[];
@@ -33,26 +23,43 @@ const COLORS = [
   '#a855f7', // purple-500
 ];
 
-export default function PortfolioPieChart({ holdings, totalValue }: PortfolioPieChartProps) {
-  const chartData = holdings
-    .map((holding) => ({
-      name: holding.coinSymbol.toUpperCase(),
-      value: Number(holding.currentValue),
-      percentage: totalValue > 0 ? (Number(holding.currentValue) / totalValue) * 100 : 0,
-      fullName: holding.coinName,
-    }))
-    .sort((a, b) => b.value - a.value); // Sort by value descending
+const PortfolioPieChart = React.memo(function PortfolioPieChart({ holdings, totalValue }: PortfolioPieChartProps) {
+  const chartData = useMemo(() =>
+    holdings
+      .map((holding) => ({
+        name: holding.coinSymbol.toUpperCase(),
+        value: Number(holding.currentPrice),
+        percentage: totalValue > 0 ? (Number(holding.currentPrice) / totalValue) * 100 : 0,
+        fullName: holding.coinName,
+      }))
+      .sort((a, b) => b.value - a.value), // Sort by value descending
+    [holdings, totalValue]
+  );
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = useCallback((value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
+  }, []);
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface ChartDataPoint {
+    name: string;
+    value: number;
+    percentage: number;
+    fullName: string;
+  }
+
+  interface TooltipProps {
+    active?: boolean;
+    payload?: Array<{
+      payload: ChartDataPoint;
+    }>;
+  }
+
+  const CustomTooltip = useCallback(({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -69,12 +76,22 @@ export default function PortfolioPieChart({ holdings, totalValue }: PortfolioPie
       );
     }
     return null;
-  };
+  }, [formatCurrency]);
 
-  const CustomLegend = ({ payload }: any) => {
+  interface LegendProps {
+    payload?: Array<{
+      value: string;
+      color: string;
+      payload: ChartDataPoint;
+    }>;
+  }
+
+  const CustomLegend = ({ payload }: LegendProps) => {
+    if (!payload) return null;
+
     return (
       <div className="mt-4 grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={`legend-${index}`} className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <div
@@ -106,7 +123,11 @@ export default function PortfolioPieChart({ holdings, totalValue }: PortfolioPie
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ percentage }) => `${percentage.toFixed(1)}%`}
+              // @ts-expect-error - Recharts label typing is complex
+              label={((props: { percentage?: number }) => {
+                const percentage = props.percentage;
+                return percentage ? `${percentage.toFixed(1)}%` : '';
+              })}
               innerRadius={60}
               outerRadius={95}
               fill="#8884d8"
@@ -137,4 +158,8 @@ export default function PortfolioPieChart({ holdings, totalValue }: PortfolioPie
       }))} />
     </div>
   );
-}
+});
+
+PortfolioPieChart.displayName = 'PortfolioPieChart';
+
+export default PortfolioPieChart;

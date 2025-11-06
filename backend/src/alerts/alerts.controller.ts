@@ -14,7 +14,6 @@ import {
 import { AlertsService } from "./alerts.service";
 import { AuthService } from "../auth/auth.service";
 import { CreateAlertDto } from "./dto/create-alert.dto";
-import { ToggleAlertDto } from "./dto/toggle-alert.dto";
 
 @Controller("alerts")
 export class AlertsController {
@@ -49,6 +48,17 @@ export class AlertsController {
     return this.alertsService.getUserAlerts(user.id);
   }
 
+  @Get("triggered")
+  async getTriggeredAlerts(@Headers("authorization") authHeader: string) {
+    const user = await this.getUserFromToken(authHeader);
+    const alerts = await this.alertsService.getTriggeredAlerts(user.id);
+    console.log(
+      "[AlertsController] Returning triggered alerts:",
+      JSON.stringify(alerts, null, 2),
+    );
+    return alerts;
+  }
+
   @Delete(":id")
   async deleteAlert(
     @Headers("authorization") authHeader: string,
@@ -60,14 +70,12 @@ export class AlertsController {
   }
 
   @Patch(":id/toggle")
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async toggleAlert(
     @Headers("authorization") authHeader: string,
     @Param("id") alertId: string,
-    @Body() body: ToggleAlertDto,
   ) {
     const user = await this.getUserFromToken(authHeader);
-    await this.alertsService.toggleAlert(user.id, alertId, body.isActive);
+    await this.alertsService.toggleAlert(user.id, alertId);
     return { message: "Alert toggled successfully" };
   }
 }
