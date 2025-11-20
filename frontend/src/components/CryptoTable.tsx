@@ -125,97 +125,97 @@ const CryptoTable = React.memo(function CryptoTable({ cryptos, loading, error, o
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-dark-500/50 bg-gray-800">
+    <div className="rounded-xl border border-dark-500/50 bg-gray-800 overflow-x-auto">
       <table className="w-full bg-transparent table-fixed">
-        <thead className="bg-gray-800 border-b border-dark-500/50">
-          <tr>
-            <th className="pl-6 pr-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-16">
-              #
-            </th>
-            <th className="px-4 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-40">
-              Tên đồng tiền
-            </th>
-            <th className="px-4 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
-              Giá
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
-              1h %
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
-              24h %
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
-              7 ngày %
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
-              <div>Vốn hóa</div>
-              <div>thị trường</div>
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
-              Khối lượng (24h)
-            </th>
-            <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-40">
-              7d trước
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-transparent divide-y divide-dark-500/30">
-          {cryptos.map((crypto) => (
-            <tr key={crypto.id} className="hover:bg-gray-700 cursor-pointer transition-colors duration-150 border-b border-dark-500/30 last:border-b-0">
-              <td className="pl-6 pr-3 py-4 whitespace-nowrap">
-                <div className="text-sm font-semibold text-gray-100">
-                  {crypto.cmc_rank}
-                </div>
-              </td>
-              <td className="px-4 py-4">
-                <Link href={`/coin/${crypto.slug}`} className="flex items-center gap-2 hover:text-primary-500 transition-colors duration-200">
-                  <div className="relative w-7 h-7 flex-shrink-0">
-                    <Image
-                      src={crypto.image || `https://s2.coinmarketcap.com/static/img/coins/64x64/${crypto.id}.png`}
-                      alt={crypto.name}
-                      width={28}
-                      height={28}
-                      className="rounded-full"
-                      unoptimized
+            <thead className="bg-gray-800 border-b border-dark-500/50 sticky top-0 z-10">
+              <tr>
+                <th className="pl-6 pr-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-16">
+                  #
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-40">
+                  Tên đồng tiền
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
+                  Giá
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
+                  1h %
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
+                  24h %
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-24">
+                  7 ngày %
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
+                  <div>Vốn hóa</div>
+                  <div>thị trường</div>
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-32">
+                  Khối lượng (24h)
+                </th>
+                <th className="px-3 py-4 text-left text-sm font-semibold text-gray-100 uppercase tracking-wider w-40">
+                  7d trước
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-transparent divide-y divide-dark-500/30">
+              {cryptos.map((crypto) => (
+                <tr key={crypto.id} className="hover:bg-gray-700 cursor-pointer transition-colors duration-150 border-b border-dark-500/30 last:border-b-0">
+                  <td className="pl-6 pr-3 py-4 whitespace-nowrap">
+                    <div className="text-sm font-semibold text-gray-100">
+                      {crypto.cmc_rank}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <Link href={`/coin/${crypto.slug}`} className="flex items-center gap-2 hover:text-primary-500 transition-colors duration-200">
+                      <div className="relative w-7 h-7 flex-shrink-0">
+                        <Image
+                          src={crypto.image || `https://s2.coinmarketcap.com/static/img/coins/64x64/${crypto.id}.png`}
+                          alt={crypto.name}
+                          width={28}
+                          height={28}
+                          className="rounded-full"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="overflow-hidden">
+                        <div className="text-base font-semibold text-gray-50 truncate" title={crypto.name}>
+                          {crypto.name}
+                        </div>
+                        <div className="text-sm text-gray-200 font-medium truncate uppercase">
+                          {crypto.symbol}
+                        </div>
+                      </div>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-base font-bold text-gray-50">
+                    {formatPrice(crypto.quote?.USD.price || 0)}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
+                    <PercentageChange change={crypto.quote?.USD.percent_change_1h || 0} />
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
+                    <PercentageChange change={crypto.quote?.USD.percent_change_24h || 0} />
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
+                    <PercentageChange change={crypto.quote?.USD.percent_change_7d || 0} />
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                    {formatMarketCap(crypto.quote?.USD.market_cap || 0)}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                    {formatVolume(crypto.quote?.USD.volume_24h || 0)}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-sm">
+                    <MiniSparkline
+                      data={crypto.sparkline_in_7d?.price}
+                      changePercent={crypto.quote?.USD.percent_change_7d || 0}
                     />
-                  </div>
-                  <div className="overflow-hidden">
-                    <div className="text-base font-semibold text-gray-50 truncate" title={crypto.name}>
-                      {crypto.name}
-                    </div>
-                    <div className="text-sm text-gray-200 font-medium truncate uppercase">
-                      {crypto.symbol}
-                    </div>
-                  </div>
-                </Link>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap text-base font-bold text-gray-50">
-                {formatPrice(crypto.quote?.USD.price || 0)}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote?.USD.percent_change_1h || 0} />
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote?.USD.percent_change_24h || 0} />
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm">
-                <PercentageChange change={crypto.quote?.USD.percent_change_7d || 0} />
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                {formatMarketCap(crypto.quote?.USD.market_cap || 0)}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                {formatVolume(crypto.quote?.USD.volume_24h || 0)}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm">
-                <MiniSparkline
-                  data={crypto.sparkline_in_7d?.price}
-                  changePercent={crypto.quote?.USD.percent_change_7d || 0}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
       </table>
     </div>
   );

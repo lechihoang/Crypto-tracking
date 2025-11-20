@@ -32,9 +32,6 @@ export class RagController {
   async testEmbedding(@Query("text") text: string) {
     try {
       const testText = text || "Bitcoin is a decentralized cryptocurrency";
-      this.logger.debug(
-        `Testing embedding service with text: "${testText.substring(0, 50)}..."`,
-      );
 
       const embedding = await this.embeddingService.createEmbedding(testText);
 
@@ -75,8 +72,6 @@ export class RagController {
     error?: string;
   }> {
     try {
-      this.logger.debug("Testing Pinecone connection...");
-
       const stats: IndexStats | null = await this.vectorService.getIndexStats();
 
       return {
@@ -109,8 +104,6 @@ export class RagController {
   @UseGuards(DevelopmentOnlyGuard)
   async testCoinGecko() {
     try {
-      this.logger.debug("Testing CoinGecko API connection...");
-
       const content = await this.scraperService.getAllCoinGeckoData();
 
       return {
@@ -280,17 +273,11 @@ export class RagController {
       const limit = body.limit || 5;
       const threshold = body.threshold || 0.3;
 
-      this.logger.debug(
-        `Searching knowledge base with query: "${body.query.substring(0, 50)}...", limit: ${limit}, threshold: ${threshold}`,
-      );
-
       const results = await this.ragService.searchSimilarDocuments(
         body.query,
         limit,
         threshold,
       );
-
-      this.logger.debug(`Search completed, found ${results.length} results`);
 
       return {
         success: true,
@@ -331,8 +318,6 @@ export class RagController {
   @Get("stats")
   async getStats() {
     try {
-      this.logger.debug("Retrieving vector database statistics...");
-
       const stats = await this.vectorService.getIndexStats();
 
       if (!stats) {

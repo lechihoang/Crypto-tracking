@@ -11,7 +11,8 @@ import PortfolioChart from '@/components/PortfolioChart';
 import PortfolioPieChart from '@/components/PortfolioPieChart';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Loader, PieChart, Edit2, Trash2, Target, X, Flag } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Lazy load modals
 const EditHoldingModal = dynamic(() => import('@/components/EditHoldingModal'), {
@@ -207,7 +208,6 @@ export default function PortfolioPage() {
 
       await deletePromise;
     } catch {
-      // Error already handled by toast.promise
     } finally {
       setDeleteLoading(false);
     }
@@ -339,7 +339,7 @@ export default function PortfolioPage() {
         {/* Benchmark Section & Pie Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Benchmark Section */}
-          <div className="bg-gray-800 border border-gray-600/50 shadow-[0_2px_8px_rgba(0,0,0,0.3)] rounded-xl hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300 p-6">
+          <div className="bg-gray-800 border border-gray-600/50 shadow-md rounded-xl hover:shadow-lg transition-all duration-300 p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
@@ -437,7 +437,7 @@ export default function PortfolioPage() {
           </div>
 
           {/* Portfolio Distribution Pie Chart */}
-          <div className="bg-gray-800 border border-gray-600/50 shadow-[0_2px_8px_rgba(0,0,0,0.3)] rounded-xl hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300 p-6">
+          <div className="bg-gray-800 border border-gray-600/50 shadow-md rounded-xl hover:shadow-lg transition-all duration-300 p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
                 <PieChart className="w-5 h-5 text-primary-400" />
@@ -468,7 +468,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* Holdings Table */}
-        <div className="bg-gray-800 border border-gray-600/50 shadow-[0_2px_8px_rgba(0,0,0,0.3)] rounded-xl hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+        <div className="bg-gray-800 border border-gray-600/50 shadow-md rounded-xl hover:shadow-lg transition-all duration-300">
           <div className="px-6 py-4 border-b border-gray-600/50">
             <h3 className="text-lg font-semibold text-white">Danh sách coin</h3>
           </div>
@@ -489,72 +489,74 @@ export default function PortfolioPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-800">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
-                      Coin
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
-                      Số lượng
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
-                      Giá/coin
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
-                      Tổng giá trị
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
-                      Thao tác
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-600/30">
-                  {holdings.map((holding) => (
-                    <tr key={holding._id} className="hover:bg-dark-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {holding.coinName}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            {holding.coinSymbol.toUpperCase()}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                        {Number(holding.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                        {formatCurrency(Number(holding.currentPrice), true)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                        {formatCurrency(Number(holding.currentValue), true)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setEditingHolding(holding)}
-                            className="p-1 text-gray-400 hover:text-primary-400 transition-colors"
-                            title="Sửa"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingHolding(holding)}
-                            className="p-1 text-gray-400 hover:text-danger-400 transition-colors"
-                            title="Xóa"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+            <ScrollArea className="h-[600px]">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-800 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
+                        Coin
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
+                        Số lượng
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
+                        Giá/coin
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
+                        Tổng giá trị
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-100 uppercase tracking-wider border-b border-gray-600/50">
+                        Thao tác
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-600/30">
+                    {holdings.map((holding) => (
+                      <tr key={holding._id} className="hover:bg-dark-700 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-white">
+                              {holding.coinName}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {holding.coinSymbol.toUpperCase()}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                          {Number(holding.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                          {formatCurrency(Number(holding.currentPrice), true)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                          {formatCurrency(Number(holding.currentValue), true)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setEditingHolding(holding)}
+                              className="p-1 text-gray-400 hover:text-primary-400 transition-colors"
+                              title="Sửa"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingHolding(holding)}
+                              className="p-1 text-gray-400 hover:text-danger-400 transition-colors"
+                              title="Xóa"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
           )}
         </div>
 

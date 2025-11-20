@@ -57,7 +57,7 @@ export default function CoinDetailPage() {
   if (error || !coin) {
     return (
       <div className="min-h-screen bg-dark-900 flex flex-col justify-center items-center">
-        <div className="bg-gray-800 p-8 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 text-center">
+        <div className="bg-gray-800 p-8 rounded-xl shadow-md border border-gray-600/50 text-center">
           <p className="text-red-400 text-lg font-medium mb-6">{error || 'Không tìm thấy đồng tiền'}</p>
           <Link
             href="/"
@@ -72,7 +72,7 @@ export default function CoinDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-900">
-      <header className="bg-gray-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)] border-b border-gray-600/50">
+      <header className="bg-gray-800 shadow-md border-b border-gray-600/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button

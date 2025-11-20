@@ -63,7 +63,7 @@ const PortfolioPieChart = React.memo(function PortfolioPieChart({ holdings, tota
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-lg">
           <p className="font-semibold text-white">{data.fullName}</p>
           <p className="text-sm text-gray-100">{data.name}</p>
           <p className="text-base font-bold text-primary-500 mt-1">

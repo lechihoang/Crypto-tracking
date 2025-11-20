@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { alertsApi } from '@/lib/api';
 import { PriceAlert } from '@/types/alerts';
 import { formatNumber } from '@/utils/formatPrice';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Plus, TrendingUp, TrendingDown, Edit2, Trash2, Bell, Search } from 'lucide-react';
 import Image from 'next/image';
 import PriceAlertModal from '@/components/PriceAlertModal';
 import EditAlertModal from '@/components/EditAlertModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AlertsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -100,7 +102,6 @@ export default function AlertsPage() {
       setDeletingAlert(null);
       fetchAlerts();
     } catch {
-      // Error already handled by toast.promise
     }
   };
 
@@ -136,13 +137,22 @@ export default function AlertsPage() {
           </div>
 
           {/* Create Button */}
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            Tạo cảnh báo mới
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  Tạo cảnh báo mới
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create a new price alert</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Results Count */}
@@ -183,8 +193,9 @@ export default function AlertsPage() {
           </div>
         ) : (
           /* Alerts List - One per row */
-          <div className="space-y-4">
-            {filteredAlerts.map((alert) => (
+          <ScrollArea className="h-[calc(100vh-300px)]">
+            <div className="space-y-4 pr-4">
+              {filteredAlerts.map((alert) => (
               <div
                 key={alert._id}
                 className="group relative bg-gray-800 rounded-lg p-5 border border-gray-600/50 hover:border-primary-500/40 transition-all"
@@ -252,26 +263,41 @@ export default function AlertsPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setEditingAlert(alert)}
-                      className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-500/20 rounded-lg transition-all"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(alert)}
-                      className="p-2 text-gray-400 hover:text-danger-500 hover:bg-danger-500/20 rounded-lg transition-all"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <TooltipProvider>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setEditingAlert(alert)}
+                            className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-500/20 rounded-lg transition-all"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit this alert</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleDeleteClick(alert)}
+                            className="p-2 text-gray-400 hover:text-danger-500 hover:bg-danger-500/20 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Delete this alert</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
         )}
       </div>
 

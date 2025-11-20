@@ -53,7 +53,6 @@ export class AlertsSchedulerService {
         marketData.map((coin) => [coin.coinId, coin.current_price]),
       );
 
-      // Check each alert
       for (const alert of activeAlerts) {
         if (!alert.coinId || !alert.targetPrice || !alert.condition) {
           this.logger.warn(`Invalid alert data: ${JSON.stringify(alert)}`);

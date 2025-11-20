@@ -4,8 +4,9 @@ import "./globals.css";
 import ChatBubble from "@/components/ChatBubble";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,46 +48,8 @@ export default function RootLayout({
           </main>
           <Footer />
           <ChatBubble />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 5000,
-              style: {
-                background: '#1f2937', // dark-800
-                color: '#f9fafb', // gray-50
-                borderRadius: '0.75rem',
-                padding: '16px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                border: '1px solid #4b5563', // gray-600
-                cursor: 'pointer',
-                maxWidth: '400px',
-              },
-              success: {
-                duration: 3000,
-                style: {
-                  background: '#1E2026',
-                  color: '#16C784',
-                  border: '1px solid #16C784',
-                },
-                iconTheme: {
-                  primary: '#16C784',
-                  secondary: '#1E2026',
-                },
-              },
-              error: {
-                duration: 3000,
-                style: {
-                  background: '#1E2026',
-                  color: '#EA3943',
-                  border: '1px solid #EA3943',
-                },
-                iconTheme: {
-                  primary: '#EA3943',
-                  secondary: '#1E2026',
-                },
-              },
-            }}
-          />
+          <CommandPalette />
+          <Toaster position="bottom-right" duration={5000} />
         </AuthProvider>
       </body>
     </html>

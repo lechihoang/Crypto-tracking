@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MessageCircle, X, Minimize2 } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
 
 // Lazy load ChatWindow
 const ChatWindow = dynamic(() => import('./ChatWindow'), {
@@ -16,57 +16,29 @@ const ChatWindow = dynamic(() => import('./ChatWindow'), {
 
 export default function ChatBubble() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-
-  const toggleChat = () => {
-    if (isOpen && !isMinimized) {
-      setIsMinimized(true);
-    } else if (isOpen && isMinimized) {
-      setIsMinimized(false);
-    } else {
-      setIsOpen(true);
-      setIsMinimized(false);
-    }
-  };
-
-  const closeChat = () => {
-    setIsOpen(false);
-    setIsMinimized(false);
-  };
 
   return (
     <>
-      {/* Chat Window */}
+      {/* Chat Window - Toggle Display */}
       {isOpen && (
-        <div
-          className={`fixed bottom-20 right-4 md:right-6 z-50 transition-all duration-300 ${
-            isMinimized ? 'scale-0 opacity-0' : 'scale-100 opacity-100'
-          }`}
-        >
-          <div className="bg-gray-800 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.4)] border border-gray-600/50 w-80 md:w-96 h-96 md:h-[500px] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="bg-primary-500 text-white p-4 flex justify-between items-center border-b border-gray-700/40">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-success-400 rounded-full animate-pulse"></div>
-                <h3 className="font-semibold">Crypto Assistant</h3>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={toggleChat}
-                  className="hover:bg-primary-800/50 p-1 rounded transition-colors"
-                >
-                  <Minimize2 size={16} />
-                </button>
-                <button
-                  onClick={closeChat}
-                  className="hover:bg-primary-800/50 p-1 rounded transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+        <div className="fixed bottom-20 right-4 md:right-6 z-50 w-80 md:w-96 h-[500px] bg-dark-800 rounded-lg shadow-2xl border border-gray-700/40 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {/* Header */}
+          <div className="bg-primary-500 text-white p-4 rounded-t-lg border-b border-gray-700/40 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-success-400 rounded-full animate-pulse"></div>
+              <h3 className="font-semibold">Crypto Assistant</h3>
             </div>
-
-            {/* Chat Content */}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="hover:bg-primary-600 rounded-full p-1 transition-colors"
+              aria-label="Close chat"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          {/* Chat Content */}
+          <div className="flex-1 overflow-hidden">
             <ChatWindow />
           </div>
         </div>
@@ -74,21 +46,23 @@ export default function ChatBubble() {
 
       {/* Floating Button */}
       <button
-        onClick={toggleChat}
-        className={`fixed bottom-4 right-4 md:right-6 z-50 w-14 h-14 bg-primary-500 hover:bg-primary-600 text-white rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300 flex items-center justify-center group ${
-          isOpen && !isMinimized ? 'scale-90' : 'scale-100'
-        }`}
-        aria-label="Open crypto assistant chat"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`fixed bottom-4 right-4 md:right-6 z-50 w-14 h-14 ${
+          isOpen ? 'bg-gray-600 hover:bg-gray-700' : 'bg-primary-500 hover:bg-primary-600'
+        } text-white rounded-full shadow-lg transition-all duration-300 flex items-center justify-center group`}
+        aria-label={isOpen ? "Close crypto assistant chat" : "Open crypto assistant chat"}
         data-tooltip="Crypto chatbot"
       >
-        {isOpen && !isMinimized ? (
-          <Minimize2 size={24} className="group-hover:scale-110 transition-transform" />
+        {isOpen ? (
+          <X size={24} className="group-hover:scale-110 transition-transform" />
         ) : (
           <MessageCircle size={24} className="group-hover:scale-110 transition-transform" />
         )}
 
-        {/* Notification dot */}
-        <div className="absolute -top-1 -right-1 w-3 h-3 bg-danger-500 rounded-full animate-pulse"></div>
+        {/* Notification dot - only show when closed */}
+        {!isOpen && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-danger-500 rounded-full animate-pulse"></div>
+        )}
       </button>
     </>
   );

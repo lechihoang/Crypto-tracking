@@ -20,17 +20,7 @@ export class ChatbotController {
   async sendMessage(
     @Body() body: SendMessageDto & { userId?: string },
   ): Promise<ChatResponse> {
-    console.log("[ChatBot Controller] Received request body:", body);
-
-    // Extract userId from request body (for logged-in users)
     const userId = body.userId;
-
-    console.log(
-      "[ChatBot Controller] Calling service with userId:",
-      userId,
-      "sessionId:",
-      body.sessionId,
-    );
 
     const result = await this.chatbotService.sendMessage(
       body.message,
@@ -59,17 +49,16 @@ export class ChatbotController {
       sessionId,
     );
 
-    // Get sessionId from messages if exists
     const currentSessionId = messages.length > 0 ? messages[0].sessionId : null;
 
     return {
       sessionId: currentSessionId,
       messages: messages
-        .filter((msg) => msg.role !== "system") // Filter out system messages
+        .filter((msg) => msg.role !== "system")
         .map((msg) => ({
           id: (msg as any)._id.toString(),
           content: msg.content,
-          sender: msg.role === "user" ? "user" : "bot",
+          role: msg.role,
           timestamp: (msg as any).createdAt,
         })),
     };

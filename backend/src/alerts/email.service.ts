@@ -80,7 +80,6 @@ export class EmailService {
       throw new Error("Current price is required");
     }
 
-    // Check if user has email notifications enabled
     try {
       const isEnabled = await this.userService.isEmailNotificationEnabled(
         alert.userId,

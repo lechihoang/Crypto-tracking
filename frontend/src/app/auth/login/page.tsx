@@ -7,11 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/lib/api';
 import { SignInSchema, SignInFormData } from '@/lib/validations';
-import { Mail, Lock, Eye, EyeOff, Loader } from 'lucide-react';
+import { Mail, Loader } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
+import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { signIn } = useAuth();
@@ -59,20 +63,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-dark-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg w-full space-y-8">
-        <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] p-10 border border-gray-600/50">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
-              Đăng nhập
-            </h2>
-            <p className="text-gray-100">
+      <div className="max-w-lg w-full">
+        <Card className="shadow-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl">Đăng nhập</CardTitle>
+            <CardDescription>
               Chào mừng bạn trở lại với Crypto Tracker
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
               <div className="bg-danger-500/20 border border-danger-500/40 text-danger-400 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -82,22 +83,20 @@ export default function LoginPage() {
             <div className="space-y-4">
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="email" className="text-gray-100 font-semibold">
                   Email
-                </label>
+                </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-300" />
                   </div>
-                  <input
+                  <Input
                     {...register('email')}
                     id="email"
                     type="email"
                     autoComplete="email"
                     onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg bg-gray-800 text-gray-50 placeholder-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all ${
-                      errors.email ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
+                    className={`pl-10 ${errors.email ? 'border-danger-500/40' : ''}`}
                     placeholder="Nhập email của bạn"
                   />
                 </div>
@@ -108,36 +107,17 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="password" className="text-gray-100 font-semibold">
                   Mật khẩu
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-300" />
-                  </div>
-                  <input
-                    {...register('password')}
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-lg bg-gray-800 text-gray-50 placeholder-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all ${
-                      errors.password ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
-                    placeholder="Nhập mật khẩu"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-300 hover:text-gray-100 transition-colors" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-300 hover:text-gray-100 transition-colors" />
-                    )}
-                  </button>
-                </div>
+                </Label>
+                <PasswordInput
+                  {...register('password')}
+                  id="password"
+                  autoComplete="current-password"
+                  onFocus={handleInputFocus}
+                  className={`mt-2 ${errors.password ? 'border-danger-500/40' : ''}`}
+                  placeholder="Nhập mật khẩu"
+                />
                 {errors.password && (
                   <p className="mt-1 text-sm text-danger-400">{errors.password.message}</p>
                 )}
@@ -145,17 +125,17 @@ export default function LoginPage() {
             </div>
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
               disabled={loading || isSubmitting}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full"
             >
               {loading || isSubmitting ? (
                 <Loader className="w-5 h-5 animate-spin" />
               ) : (
                 'Đăng nhập'
               )}
-            </button>
+            </Button>
 
             {/* Links */}
             <div className="flex items-center justify-between text-sm">
@@ -184,16 +164,18 @@ export default function LoginPage() {
             </div>
 
             {/* Social Login Button */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => authApi.loginWithGoogle()}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-sm font-medium text-gray-100 bg-gray-800 hover:bg-gray-700 transition-colors"
+              className="w-full"
             >
               <FaGoogle className="w-5 h-5 mr-2 text-red-500" />
               Google
-            </button>
+            </Button>
           </form>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

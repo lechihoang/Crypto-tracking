@@ -24,7 +24,6 @@ export type {
   ChatMessage,
 } from './common';
 
-// Auth types
 export type {
   User,
   AuthContextType,
@@ -36,7 +35,6 @@ export type {
   AuthResponse,
 } from './auth';
 
-// Portfolio types
 export type {
   PortfolioHolding,
   CreateHoldingRequest,
@@ -46,7 +44,6 @@ export type {
   PortfolioResponse,
 } from './portfolio';
 
-// Alert types
 export type {
   PriceAlert,
   CreateAlertRequest,

@@ -6,12 +6,15 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { SignUpSchema, SignUpFormData } from '@/lib/validations';
-import { Mail, Lock, User, Eye, EyeOff, Loader, CheckCircle } from 'lucide-react';
+import { Mail, User, Loader, CheckCircle } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa';
+import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -64,33 +67,33 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-lg w-full space-y-8">
-          <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] p-10 border border-gray-600/50 text-center">
-            <div className="mx-auto h-16 w-16 bg-success-500/20 rounded-full flex items-center justify-center mb-4 border border-success-500/40">
-              <CheckCircle className="h-8 w-8 text-success-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Đăng ký thành công!
-            </h2>
-            <p className="text-gray-100 mb-6">
-              Chúng tôi đã gửi email xác nhận đến <strong className="text-primary-400">{getValues('email')}</strong>.
-              Vui lòng kiểm tra email và nhấp vào liên kết để kích hoạt tài khoản.
-            </p>
-            <div className="space-y-3">
-              <Link
-                href="/auth/login"
-                className="w-full inline-flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-all"
-              >
-                Đăng nhập ngay
-              </Link>
-              <Link
-                href="/"
-                className="w-full inline-flex justify-center py-3 px-4 border border-gray-600 rounded-lg text-sm font-medium text-gray-100 bg-gray-800 hover:bg-gray-700 transition-colors"
-              >
-                Quay về trang chủ
-              </Link>
-            </div>
-          </div>
+        <div className="max-w-lg w-full">
+          <Card className="shadow-md text-center">
+            <CardContent className="pt-10">
+              <div className="mx-auto h-16 w-16 bg-success-500/20 rounded-full flex items-center justify-center mb-4 border border-success-500/40">
+                <CheckCircle className="h-8 w-8 text-success-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Đăng ký thành công!
+              </h2>
+              <p className="text-gray-100 mb-6">
+                Chúng tôi đã gửi email xác nhận đến <strong className="text-primary-400">{getValues('email')}</strong>.
+                Vui lòng kiểm tra email và nhấp vào liên kết để kích hoạt tài khoản.
+              </p>
+              <div className="space-y-3">
+                <Button asChild className="w-full">
+                  <Link href="/auth/login">
+                    Đăng nhập ngay
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/">
+                    Quay về trang chủ
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -98,20 +101,17 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-dark-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg w-full space-y-8">
-        <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] p-10 border border-gray-600/50">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
-              Tạo tài khoản
-            </h2>
-            <p className="text-gray-100">
+      <div className="max-w-lg w-full">
+        <Card className="shadow-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl">Tạo tài khoản</CardTitle>
+            <CardDescription>
               Tham gia Crypto Tracker để theo dõi danh mục của bạn
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
               <div className="bg-danger-500/20 border border-danger-500/40 text-danger-400 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -121,22 +121,20 @@ export default function RegisterPage() {
             <div className="space-y-4">
               {/* Full Name */}
               <div>
-                <label htmlFor="fullName" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="fullName" className="text-gray-100 font-semibold">
                   Họ và tên
-                </label>
-                <div className="relative">
+                </Label>
+                <div className="relative mt-2">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-300" />
                   </div>
-                  <input
+                  <Input
                     {...register('fullName')}
                     id="fullName"
                     type="text"
                     autoComplete="name"
                     onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 text-gray-50 bg-gray-800 ${
-                      errors.fullName ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
+                    className={`pl-10 ${errors.fullName ? 'border-danger-500/40' : ''}`}
                     placeholder="Nhập họ và tên"
                   />
                 </div>
@@ -147,22 +145,20 @@ export default function RegisterPage() {
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="email" className="text-gray-100 font-semibold">
                   Email
-                </label>
-                <div className="relative">
+                </Label>
+                <div className="relative mt-2">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-300" />
                   </div>
-                  <input
+                  <Input
                     {...register('email')}
                     id="email"
                     type="email"
                     autoComplete="email"
                     onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 text-gray-50 bg-gray-800 ${
-                      errors.email ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
+                    className={`pl-10 ${errors.email ? 'border-danger-500/40' : ''}`}
                     placeholder="Nhập email của bạn"
                   />
                 </div>
@@ -173,36 +169,17 @@ export default function RegisterPage() {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="password" className="text-gray-100 font-semibold">
                   Mật khẩu
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-300" />
-                  </div>
-                  <input
-                    {...register('password')}
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 text-gray-50 bg-gray-800 ${
-                      errors.password ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
-                    placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-300 hover:text-gray-100" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-300 hover:text-gray-100" />
-                    )}
-                  </button>
-                </div>
+                </Label>
+                <PasswordInput
+                  {...register('password')}
+                  id="password"
+                  autoComplete="new-password"
+                  onFocus={handleInputFocus}
+                  className={`mt-2 ${errors.password ? 'border-danger-500/40' : ''}`}
+                  placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
+                />
                 {errors.password && (
                   <p className="mt-1 text-sm text-danger-400">{errors.password.message}</p>
                 )}
@@ -210,36 +187,17 @@ export default function RegisterPage() {
 
               {/* Confirm Password */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-100 mb-2">
+                <Label htmlFor="confirmPassword" className="text-gray-100 font-semibold">
                   Xác nhận mật khẩu
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-300" />
-                  </div>
-                  <input
-                    {...register('confirmPassword')}
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    onFocus={handleInputFocus}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-300 text-gray-50 bg-gray-800 ${
-                      errors.confirmPassword ? 'border-danger-500/40' : 'border-gray-600'
-                    }`}
-                    placeholder="Nhập lại mật khẩu"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-300 hover:text-gray-100" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-300 hover:text-gray-100" />
-                    )}
-                  </button>
-                </div>
+                </Label>
+                <PasswordInput
+                  {...register('confirmPassword')}
+                  id="confirmPassword"
+                  autoComplete="new-password"
+                  onFocus={handleInputFocus}
+                  className={`mt-2 ${errors.confirmPassword ? 'border-danger-500/40' : ''}`}
+                  placeholder="Nhập lại mật khẩu"
+                />
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-danger-400">{errors.confirmPassword.message}</p>
                 )}
@@ -247,17 +205,17 @@ export default function RegisterPage() {
             </div>
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
               disabled={loading || isSubmitting}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full"
             >
               {loading || isSubmitting ? (
                 <Loader className="w-5 h-5 animate-spin" />
               ) : (
                 'Tạo tài khoản'
               )}
-            </button>
+            </Button>
 
             {/* Divider */}
             <div className="relative">
@@ -270,14 +228,15 @@ export default function RegisterPage() {
             </div>
 
             {/* Social Login Button */}
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => authApi.loginWithGoogle()}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-sm font-medium text-gray-100 bg-gray-800 hover:bg-gray-700 transition-colors"
+              className="w-full"
             >
               <FaGoogle className="w-5 h-5 mr-2 text-red-500" />
               Google
-            </button>
+            </Button>
 
             {/* Login Link */}
             <div className="text-center text-sm">
@@ -290,7 +249,8 @@ export default function RegisterPage() {
               </Link>
             </div>
           </form>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

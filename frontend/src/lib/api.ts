@@ -3,7 +3,6 @@ import axios from 'axios';
 // Backend API response interfaces
 
 import {
-  // Auth types
   SignInRequest,
   SignUpRequest,
   ResetPasswordRequest,
@@ -11,20 +10,17 @@ import {
   ChangePasswordRequest,
   AuthResponse,
 
-  // Portfolio types
   PortfolioHolding,
   PortfolioValue,
   CreateHoldingRequest,
   UpdateHoldingRequest,
   PortfolioResponse,
 
-  // Alert types
   PriceAlert,
   CreateAlertRequest,
   UpdateAlertRequest,
   AlertsResponse,
 
-  // Crypto types
   CoinDetails,
 } from '@/types';
 
@@ -66,7 +62,6 @@ export const clientApi = {
       };
     }
 
-    // Transform backend response to match frontend expectations
     return {
       data: (response.data as CoinGeckoData[]).map((coin) => ({
         id: coin.id, // Use CoinGecko string ID directly
@@ -110,7 +105,6 @@ export const clientApi = {
     const coinData = response.data as CoinDetails & {
       tickers?: Array<Record<string, unknown>>;
     };
-    // Transform backend response to match frontend expectations
     return {
       data: {
         [id]: {
@@ -154,12 +148,10 @@ export const clientApi = {
   },
 
   async getQuotes(ids: string) {
-    // Get market data from the new endpoint
     const response = await backendApi.get(`/crypto/${ids}/market`);
     if (response.status !== 200) throw new Error('Failed to fetch quotes');
 
     const marketData = response.data;
-    // Transform backend response to match frontend expectations
     return {
       data: {
         [ids]: {
@@ -204,34 +196,18 @@ export const clientApi = {
 };
 
 
-// Auth API client using backend
 export const authApi = {
   async signIn(credentials: SignInRequest): Promise<AuthResponse> {
     try {
-      console.log('Sending signin request to backend:', credentials);
       const response = await backendApi.post('/auth/signin', credentials);
 
-      console.log('Backend response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data,
-        hasUser: !!response.data?.user,
-      });
-
       if (response.data.user) {
-        // Tokens are now in HttpOnly cookies, no need to store in localStorage
         return response.data;
       }
 
-      console.error('No user in response:', response.data);
       return { error: 'Đăng nhập thất bại' };
     } catch (error: unknown) {
-      console.error('SignIn request error:', error);
       const err = error as { response?: { data?: { message?: string }; status?: number } };
-      console.error('Error details:', {
-        status: err.response?.status,
-        message: err.response?.data?.message,
-      });
       return {
         error: err.response?.data?.message || 'Đăng nhập thất bại'
       };
@@ -283,7 +259,6 @@ export const authApi = {
 
   async changePassword(data: ChangePasswordRequest): Promise<AuthResponse> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.post('/auth/change-password', data);
       return { message: response.data.message || 'Đổi mật khẩu thành công!' };
     } catch (error: unknown) {
@@ -296,7 +271,6 @@ export const authApi = {
 
   async getProfile(): Promise<AuthResponse> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/auth/me');
 
       return {
@@ -318,15 +292,12 @@ export const authApi = {
   async signOut(): Promise<void> {
     if (typeof window !== 'undefined') {
       try {
-        // Call backend logout endpoint to clear HttpOnly cookies
         await backendApi.post('/auth/logout');
       } catch (error) {
-        console.error('Logout API error:', error);
       }
     }
   },
 
-  // Check if user is authenticated by calling /auth/me
   async isAuthenticated(): Promise<boolean> {
     try {
       const response = await backendApi.get('/auth/me');
@@ -336,12 +307,10 @@ export const authApi = {
     }
   },
 
-  // Social Login Methods
   loginWithGoogle(): void {
     window.location.href = `${BACKEND_API_URL}/auth/google`;
   },
 
-  // Handle OAuth callback (called from callback page)
   handleAuthCallback(params: URLSearchParams): AuthResponse {
     const error = params.get('error');
     if (error) {
@@ -355,7 +324,6 @@ export const authApi = {
     const picture = params.get('picture');
 
     if (success === 'true' && userId && email) {
-      // Tokens are in HttpOnly cookies, just return user info
       return {
         user: {
           id: userId,
@@ -370,13 +338,10 @@ export const authApi = {
   }
 };
 
-// Price Alerts API interfaces
 
-// Price Alerts API client
 export const alertsApi = {
   async createAlert(alertData: CreateAlertRequest): Promise<AlertsResponse<PriceAlert[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.post('/alerts', alertData);
       return { data: [response.data] };
     } catch (error: unknown) {
@@ -389,7 +354,6 @@ export const alertsApi = {
 
   async getAlerts(): Promise<AlertsResponse<PriceAlert[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/alerts');
       return { data: response.data };
     } catch (error: unknown) {
@@ -402,7 +366,6 @@ export const alertsApi = {
 
   async deleteAlert(alertId: string): Promise<AlertsResponse<void>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.delete(`/alerts/${alertId}`);
       return { message: response.data.message };
     } catch (error: unknown) {
@@ -415,7 +378,6 @@ export const alertsApi = {
 
   async toggleAlert(alertId: string, isActive: boolean): Promise<AlertsResponse<void>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.patch(`/alerts/${alertId}/toggle`, { isActive });
       return { message: response.data.message };
     } catch (error: unknown) {
@@ -428,10 +390,8 @@ export const alertsApi = {
 
   async getTriggeredAlerts(): Promise<AlertsResponse<PriceAlert[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/alerts/triggered');
 
-      // Backend already returns camelCase, no transformation needed
       return { data: response.data };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -443,7 +403,6 @@ export const alertsApi = {
 
   async updateAlert(alertId: string, data: UpdateAlertRequest): Promise<AlertsResponse<PriceAlert>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.patch(`/alerts/${alertId}`, data);
       return { data: response.data };
     } catch (error: unknown) {
@@ -455,12 +414,9 @@ export const alertsApi = {
   }
 };
 
-// Portfolio API interfaces
-// Portfolio API client
 export const portfolioApi = {
   async getHoldings(): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/portfolio/holdings');
       return { data: response.data };
     } catch (error: unknown) {
@@ -473,7 +429,6 @@ export const portfolioApi = {
 
   async addHolding(holdingData: CreateHoldingRequest): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.post('/portfolio/holdings', holdingData);
       return { data: [response.data] };
     } catch (error: unknown) {
@@ -486,7 +441,6 @@ export const portfolioApi = {
 
   async updateHolding(holdingId: string, holdingData: UpdateHoldingRequest): Promise<PortfolioResponse<PortfolioHolding[]>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.put(`/portfolio/holdings/${holdingId}`, holdingData);
       return { data: [response.data] };
     } catch (error: unknown) {
@@ -499,7 +453,6 @@ export const portfolioApi = {
 
   async removeHolding(holdingId: string): Promise<PortfolioResponse<void>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.delete(`/portfolio/holdings/${holdingId}`);
       return { message: response.data.message };
     } catch (error: unknown) {
@@ -512,7 +465,6 @@ export const portfolioApi = {
 
   async getPortfolioValue(): Promise<PortfolioResponse<PortfolioValue>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/portfolio/value');
       return { data: response.data };
     } catch (error: unknown) {
@@ -525,7 +477,6 @@ export const portfolioApi = {
 
   async getPortfolioValueHistory(days: number = 7): Promise<PortfolioResponse<unknown>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get(`/portfolio/value-history?days=${days}`);
       return { data: response.data.data };
     } catch (error: unknown) {
@@ -538,7 +489,6 @@ export const portfolioApi = {
 
   async setBenchmark(benchmarkValue: number): Promise<PortfolioResponse<unknown>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.post('/portfolio/benchmark', { benchmarkValue });
       return { data: response.data };
     } catch (error: unknown) {
@@ -551,7 +501,6 @@ export const portfolioApi = {
 
   async getBenchmark(): Promise<PortfolioResponse<unknown>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.get('/portfolio/benchmark');
       return { data: response.data };
     } catch (error: unknown) {
@@ -564,7 +513,6 @@ export const portfolioApi = {
 
   async deleteBenchmark(): Promise<PortfolioResponse<void>> {
     try {
-      // Cookies are sent automatically with withCredentials: true
       const response = await backendApi.delete('/portfolio/benchmark');
       return { message: response.data.message };
     } catch (error: unknown) {

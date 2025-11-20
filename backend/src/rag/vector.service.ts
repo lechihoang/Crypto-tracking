@@ -40,22 +40,18 @@ export class VectorService {
   async initializeIndex(): Promise<void> {
     try {
       if (!this.pinecone) {
-        console.log("Pinecone not initialized - API key missing");
         return;
       }
 
-      // Check if index exists
       const existingIndexes = await this.pinecone.listIndexes();
       const indexExists = existingIndexes.indexes?.some(
         (index) => index.name === this.indexName,
       );
 
       if (!indexExists) {
-        console.log("Creating Pinecone index...");
-
         await this.pinecone.createIndex({
           name: this.indexName,
-          dimension: 384, // all-MiniLM-L6-v2 dimensions
+          dimension: 384,
           metric: "cosine",
           spec: {
             serverless: {
@@ -64,11 +60,9 @@ export class VectorService {
             },
           },
         });
-
-        console.log("Pinecone index created successfully");
       }
     } catch (error: unknown) {
-      console.error("Error initializing Pinecone index:", error);
+      // Ignore initialization errors
     }
   }
 
@@ -106,10 +100,8 @@ export class VectorService {
         }));
 
         await index.upsert(vectors);
-        console.log(`Upserted batch ${Math.floor(i / batchSize) + 1}`);
       }
     } catch (error: unknown) {
-      console.error("Error upserting documents to Pinecone:", error);
       throw error;
     }
   }
@@ -121,7 +113,6 @@ export class VectorService {
   ): Promise<SearchResult[]> {
     try {
       if (!this.pinecone) {
-        console.log("Pinecone not initialized, returning empty results");
         return [];
       }
 
@@ -154,7 +145,6 @@ export class VectorService {
 
       return results;
     } catch (error: unknown) {
-      console.error("Error searching Pinecone:", error);
       return [];
     }
   }
@@ -162,23 +152,18 @@ export class VectorService {
   async deleteBySource(source: string): Promise<number> {
     try {
       if (!this.pinecone) {
-        console.log("Pinecone not initialized - cannot delete by source");
         return 0;
       }
 
       const index = this.pinecone.index(this.indexName);
 
-      // Get count before deletion for logging
       const statsBefore = await this.getIndexStats();
       const countBefore = statsBefore?.totalVectorCount || 0;
 
-      // If index is empty, no need to delete
       if (countBefore === 0) {
-        console.log(`No vectors to delete from source: ${source} (index is empty)`);
         return 0;
       }
 
-      // Delete all vectors matching the source
       try {
         await index.deleteMany({
           filter: {
@@ -186,26 +171,18 @@ export class VectorService {
           },
         });
       } catch (deleteError: unknown) {
-        // Handle 404 error when trying to delete from empty index
         const errorMessage = deleteError instanceof Error ? deleteError.message : String(deleteError);
         if (errorMessage.includes('404')) {
-          console.log(`No vectors found for source: ${source} (404 response)`);
           return 0;
         }
         throw deleteError;
       }
 
-      // Get count after deletion
       const statsAfter = await this.getIndexStats();
       const countAfter = statsAfter?.totalVectorCount || 0;
 
-      const deletedCount = countBefore - countAfter;
-      console.log(`Deleted ${deletedCount} vectors from source: ${source}`);
-
-      return deletedCount;
+      return countBefore - countAfter;
     } catch (error: unknown) {
-      console.error(`Error deleting vectors by source "${source}":`, error);
-      // Don't throw - log and return 0 to allow refresh to continue
       return 0;
     }
   }
@@ -225,10 +202,8 @@ export class VectorService {
           publishedAt: { $lt: cutoffDate.toISOString() },
         },
       });
-
-      console.log(`Cleaned up documents older than ${daysOld} days`);
     } catch (error: unknown) {
-      console.error("Error cleaning up old documents:", error);
+      // Ignore cleanup errors
     }
   }
 
@@ -246,7 +221,6 @@ export class VectorService {
         namespaces: stats.namespaces,
       };
     } catch (error: unknown) {
-      console.error("Error getting index stats:", error);
       return null;
     }
   }
@@ -254,7 +228,6 @@ export class VectorService {
   async deleteIndex(): Promise<void> {
     try {
       if (!this.pinecone) {
-        console.log("Pinecone not initialized - API key missing");
         return;
       }
 
@@ -264,14 +237,9 @@ export class VectorService {
       );
 
       if (indexExists) {
-        console.log(`Deleting Pinecone index: ${this.indexName}...`);
         await this.pinecone.deleteIndex(this.indexName);
-        console.log("Pinecone index deleted successfully");
-      } else {
-        console.log("Index does not exist");
       }
     } catch (error: unknown) {
-      console.error("Error deleting Pinecone index:", error);
       throw error;
     }
   }
@@ -279,16 +247,12 @@ export class VectorService {
   async deleteAllVectors(): Promise<void> {
     try {
       if (!this.pinecone) {
-        console.log("Pinecone not initialized - API key missing");
         return;
       }
 
       const index = this.pinecone.index(this.indexName);
-      console.log(`Deleting all vectors from index: ${this.indexName}...`);
       await index.deleteAll();
-      console.log("All vectors deleted successfully");
     } catch (error: unknown) {
-      console.error("Error deleting all vectors:", error);
       throw error;
     }
   }

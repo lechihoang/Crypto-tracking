@@ -72,42 +72,15 @@ export class Auth0Service {
     password: string,
   ): Promise<Auth0TokenResponse> {
     try {
-      console.log("Attempting sign in:", {
-        email,
-        passwordLength: password?.length,
-        realm: "Username-Password-Authentication",
-      });
-
       const response = await this.authentication.oauth.passwordGrant({
         username: email,
         password,
         realm: "Username-Password-Authentication",
         scope: "openid profile email",
-        // Don't include audience for password grant
-        // audience: this.audience,
-      });
-
-      console.log("Sign in successful, response:", {
-        hasAccessToken: !!response.data.access_token,
-        hasIdToken: !!response.data.id_token,
-        tokenType: response.data.token_type,
-        expiresIn: response.data.expires_in,
-        accessTokenPreview:
-          response.data.access_token?.substring(0, 50) + "...",
       });
 
       return response.data as Auth0TokenResponse;
     } catch (error: any) {
-      // Log detailed error for debugging
-      console.error("Auth0 sign in error:", {
-        email,
-        passwordLength: password?.length,
-        message: error.message,
-        response: error.response?.data,
-        statusCode: error.response?.status,
-        error: error,
-      });
-
       throw new UnauthorizedException(
         error.response?.data?.error_description ||
           error.message ||
@@ -121,11 +94,6 @@ export class Auth0Service {
    */
   async signUp(email: string, password: string, fullName?: string) {
     try {
-      console.log("Signing up user:", {
-        email,
-        passwordLength: password?.length,
-      });
-
       const userName = fullName || email.split("@")[0];
 
       const response = await this.authentication.database.signUp({
@@ -135,13 +103,9 @@ export class Auth0Service {
         user_metadata: {
           full_name: userName,
         },
-        // Set name directly in the user profile
         name: userName,
       });
 
-      console.log("Sign up response:", response.data);
-
-      // If we have user_id, update the user profile to ensure name is set
       if ((response.data as any)._id || (response.data as any).user_id) {
         const userId =
           (response.data as any)._id || (response.data as any).user_id;
@@ -149,16 +113,13 @@ export class Auth0Service {
           await this.management.users.update(userId, {
             name: userName,
           });
-          console.log("Updated user name in profile:", userName);
         } catch (updateError: any) {
-          // Log but don't fail signup if update fails
-          console.warn("Failed to update user name:", updateError.message);
+          // Ignore update errors during signup
         }
       }
 
       return response.data;
     } catch (error: any) {
-      console.error("Sign up error:", error);
       if (
         error.message?.includes("user already exists") ||
         error.message?.includes("The user already exists")
@@ -175,44 +136,22 @@ export class Auth0Service {
    */
   async getUserByToken(accessToken: string): Promise<Auth0User> {
     try {
-      // Create a cache key from the token (use first 50 chars as identifier)
       const cacheKey = `user_${accessToken.substring(0, 50)}`;
 
-      // Check cache first
       const cachedUser = this.userCache.get<Auth0User>(cacheKey);
       if (cachedUser) {
-        console.log(
-          "✓ User info retrieved from cache (avoiding Auth0 API call)",
-        );
         return cachedUser;
       }
 
-      console.log(
-        "Cache miss - getting user info from Auth0 userInfo endpoint...",
-      );
-
-      // Use Auth0's userInfo endpoint to get user details
-      // This works with both opaque tokens (encrypted) and JWTs
       const response = await axios.get(`https://${this.domain}/userinfo`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      console.log("UserInfo response:", {
-        hasSub: !!response.data.sub,
-        hasEmail: !!response.data.email,
-        hasName: !!response.data.name,
-        sub: response.data.sub,
-      });
-
       let userName = response.data.name;
 
-      // If name is not set, try to get from Management API
       if (!userName) {
-        console.log(
-          "Name not found in userInfo, fetching from Management API...",
-        );
         try {
           const fullUser = await this.management.users.get(response.data.sub);
           userName =
@@ -222,28 +161,21 @@ export class Auth0Service {
             fullUser.data.nickname ||
             fullUser.data.email?.split("@")[0];
 
-          console.log("Got name from Management API:", userName);
-
-          // Update user profile if we found a name in user_metadata but not in main profile
           if (userName && userName !== fullUser.data.name) {
             try {
               await this.management.users.update(response.data.sub, {
                 name: userName,
               });
-              console.log("Updated user name in profile");
             } catch (updateError) {
-              console.warn("Failed to update user name:", updateError);
+              // Ignore update errors
             }
           }
         } catch (mgmtError) {
-          console.warn("Failed to get user from Management API:", mgmtError);
-          // Fallback to email username
           userName =
             response.data.email?.split("@")[0] || response.data.nickname;
         }
       }
 
-      // Map Auth0 userInfo response to Auth0User format
       const user: Auth0User = {
         user_id: response.data.sub,
         email: response.data.email,
@@ -253,19 +185,10 @@ export class Auth0Service {
         nickname: response.data.nickname,
       };
 
-      // Store in cache for future requests
       this.userCache.set(cacheKey, user);
-      console.log("✓ User info cached for 5 minutes");
 
       return user;
     } catch (error: any) {
-      console.error("getUserByToken error:", {
-        message: error.message,
-        response: error.response?.data,
-        statusCode: error.response?.status,
-      });
-
-      // Provide better error messages for rate limiting
       if (error.response?.status === 429) {
         throw new UnauthorizedException(
           "Too many requests to authentication service. Please try again in a few moments.",
@@ -419,17 +342,13 @@ export class Auth0Service {
    */
   clearUserCache(accessToken: string): void {
     const cacheKey = `user_${accessToken.substring(0, 50)}`;
-    const deleted = this.userCache.del(cacheKey);
-    if (deleted) {
-      console.log("✓ User cache cleared for token on logout");
-    }
+    this.userCache.del(cacheKey);
   }
 
   /**
-   * Clear all cached user info (useful for debugging or full cache reset)
+   * Clear all cached user info
    */
   clearAllCache(): void {
     this.userCache.flushAll();
-    console.log("✓ All user cache cleared");
   }
 }

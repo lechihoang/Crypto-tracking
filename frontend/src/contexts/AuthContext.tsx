@@ -29,9 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Auth check failed:', error);
-      }
       setUser(null);
     } finally {
       setLoading(false);
@@ -53,9 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { success: false, error: 'Đăng nhập thất bại' };
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('SignIn error:', error);
-      }
       return { success: false, error: 'Đã có lỗi xảy ra' };
     }
   };
@@ -69,10 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.href = '/';
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('SignOut error:', error);
-      }
-      // Still clear user and redirect on error
       setUser(null);
       if (typeof window !== 'undefined') {
         window.location.href = '/';

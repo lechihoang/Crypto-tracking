@@ -4,7 +4,15 @@ import React, { useState, useEffect } from 'react';
 import CryptoTable from '@/components/CryptoTable';
 import { CryptoCurrency } from '@/types/crypto';
 import { clientApi } from '@/lib/api';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 export default function ComparePage() {
   const [cryptos, setCryptos] = useState<CryptoCurrency[]>([]);
@@ -80,86 +88,118 @@ export default function ComparePage() {
 
         {/* Pagination Controls - Bottom */}
         {!loading && !error && cryptos.length > 0 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-2 rounded-lg bg-gray-800 hover:bg-dark-700 border border-gray-600/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-100" />
-            </button>
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      handlePageChange(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                  aria-disabled={currentPage === 1}
+                />
+              </PaginationItem>
 
-            {/* Page Numbers */}
-            {(() => {
-              const pages = [];
-              const maxVisible = 7;
-              let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-              const endPage = Math.min(totalPages, startPage + maxVisible - 1);
+              {(() => {
+                const pages = [];
+                const maxVisible = 7;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                const endPage = Math.min(totalPages, startPage + maxVisible - 1);
 
-              if (endPage - startPage < maxVisible - 1) {
-                startPage = Math.max(1, endPage - maxVisible + 1);
-              }
-
-              // First page
-              if (startPage > 1) {
-                pages.push(
-                  <button
-                    key={1}
-                    onClick={() => handlePageChange(1)}
-                    className="min-w-[48px] px-4 py-2 rounded-lg bg-gray-800 hover:bg-dark-700 border border-gray-600/50 text-white text-lg font-semibold transition-all"
-                  >
-                    1
-                  </button>
-                );
-                if (startPage > 2) {
-                  pages.push(<span key="dots1" className="px-2 text-gray-400 text-xl font-bold">...</span>);
+                if (endPage - startPage < maxVisible - 1) {
+                  startPage = Math.max(1, endPage - maxVisible + 1);
                 }
-              }
 
-              // Visible pages
-              for (let i = startPage; i <= endPage; i++) {
-                pages.push(
-                  <button
-                    key={i}
-                    onClick={() => handlePageChange(i)}
-                    className={`min-w-[48px] px-4 py-2 rounded-lg text-lg font-bold transition-all ${
-                      currentPage === i
-                        ? 'bg-primary-500 hover:bg-primary-600 text-white border-2 border-primary-500'
-                        : 'bg-gray-800 hover:bg-dark-700 border border-gray-600/50 text-white'
-                    }`}
-                  >
-                    {i}
-                  </button>
-                );
-              }
-
-              // Last page
-              if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                  pages.push(<span key="dots2" className="px-2 text-gray-400 text-xl font-bold">...</span>);
+                // First page
+                if (startPage > 1) {
+                  pages.push(
+                    <PaginationItem key={1}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(1);
+                        }}
+                        isActive={currentPage === 1}
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                  if (startPage > 2) {
+                    pages.push(
+                      <PaginationItem key="ellipsis1">
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
                 }
-                pages.push(
-                  <button
-                    key={totalPages}
-                    onClick={() => handlePageChange(totalPages)}
-                    className="min-w-[48px] px-4 py-2 rounded-lg bg-gray-800 hover:bg-dark-700 border border-gray-600/50 text-white text-lg font-semibold transition-all"
-                  >
-                    {totalPages}
-                  </button>
-                );
-              }
 
-              return pages;
-            })()}
+                // Visible pages
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(i);
+                        }}
+                        isActive={currentPage === i}
+                      >
+                        {i}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                }
 
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              className="px-3 py-2 rounded-lg bg-gray-800 hover:bg-dark-700 border border-gray-600/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-100" />
-            </button>
-          </div>
+                // Last page
+                if (endPage < totalPages) {
+                  if (endPage < totalPages - 1) {
+                    pages.push(
+                      <PaginationItem key="ellipsis2">
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  pages.push(
+                    <PaginationItem key={totalPages}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(totalPages);
+                        }}
+                        isActive={currentPage === totalPages}
+                      >
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                }
+
+                return pages;
+              })()}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      handlePageChange(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                  aria-disabled={currentPage >= totalPages}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         )}
       </div>
     </div>

@@ -60,7 +60,6 @@ export interface PortfolioSnapshot {
   createdAt: string;
 }
 
-// Portfolio API response wrapper
 export interface PortfolioResponse<T = unknown> {
   data?: T;
   error?: string;

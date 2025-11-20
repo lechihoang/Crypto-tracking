@@ -55,27 +55,18 @@ export class AuthService {
     const { email, password } = signInDto;
 
     try {
-      console.log("Step 1: Signing in with password...");
       const tokens = await this.auth0Service.signInWithPassword(
         email,
         password,
       );
-      console.log("Step 1 successful, tokens received");
 
-      // Get user info from access token
-      console.log("Step 2: Getting user by token...");
       const user = await this.auth0Service.getUserByToken(tokens.access_token);
-      console.log("Step 2 successful, user:", {
-        id: user.user_id,
-        email: user.email,
-      });
 
-      // Save/update user email in database for future use (e.g., price alerts)
       if (user.user_id && user.email) {
         await this.userService.upsertUser(user.user_id, user.email, user.name);
       }
 
-      const result = {
+      return {
         user: {
           id: user.user_id,
           email: user.email,
@@ -89,11 +80,7 @@ export class AuthService {
           expires_in: tokens.expires_in,
         },
       };
-
-      console.log("Returning result with user and session");
-      return result;
     } catch (error: any) {
-      console.error("SignIn error:", error.message || error);
       throw new UnauthorizedException("Invalid credentials");
     }
   }

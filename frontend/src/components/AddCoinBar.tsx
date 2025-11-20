@@ -1,11 +1,41 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Loader, X } from 'lucide-react';
+import { Plus, Loader, X } from 'lucide-react';
 import { portfolioApi, clientApi } from '@/lib/api';
-import toast from 'react-hot-toast';
-
+import { toast } from 'sonner';
+import { Card } from '@/components/ui/card';
+import { CoinCombobox } from '@/components/CoinCombobox';
 import { Coin } from '@/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+
+const addCoinSchema = z.object({
+  coin: z.object({
+    id: z.string(),
+    name: z.string(),
+    symbol: z.string(),
+    image: z.string(),
+  }).nullable().refine((val) => val !== null, {
+    message: 'Vui lòng chọn coin',
+  }),
+  quantity: z.string()
+    .min(1, 'Vui lòng nhập số lượng')
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: 'Số lượng phải lớn hơn 0',
+    }),
+});
+
+type AddCoinFormData = z.infer<typeof addCoinSchema>;
 
 interface AddCoinBarProps {
   onSuccess: () => void;
@@ -14,14 +44,16 @@ interface AddCoinBarProps {
 export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
   const [showForm, setShowForm] = useState(false);
   const [coins, setCoins] = useState<Coin[]>([]);
-  const [filteredCoins, setFilteredCoins] = useState<Coin[]>([]);
-  const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
   const [coinsLoading, setCoinsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
+
+  const form = useForm<AddCoinFormData>({
+    resolver: zodResolver(addCoinSchema),
+    defaultValues: {
+      coin: null,
+      quantity: '',
+    },
+  });
 
   // Load top coins when form is shown
   useEffect(() => {
@@ -30,19 +62,6 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showForm]);
-
-  // Filter coins based on search term
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredCoins(coins.slice(0, 10)); // Show top 10 by default
-    } else {
-      const filtered = coins.filter(coin =>
-        coin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        coin.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredCoins(filtered.slice(0, 10));
-    }
-  }, [searchTerm, coins]);
 
   const loadTopCoins = async () => {
     setCoinsLoading(true);
@@ -58,7 +77,6 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
             image: coin.image!,
           }));
         setCoins(coinData);
-        setFilteredCoins(coinData.slice(0, 10));
       }
     } catch (error) {
       console.error('Failed to load coins:', error);
@@ -67,30 +85,20 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
     }
   };
 
-  const handleCoinSelect = (coin: Coin) => {
-    setSelectedCoin(coin);
-    setSearchTerm(coin.name);
-    setShowDropdown(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCoin || !quantity) {
-      toast.error('Vui lòng chọn coin và nhập số lượng');
-      return;
-    }
+  const onSubmit = async (data: AddCoinFormData) => {
+    if (!data.coin) return;
 
     setLoading(true);
-    const coinName = selectedCoin.name;
+    const coinName = data.coin.name;
 
     try {
       const addPromise = (async () => {
         const result = await portfolioApi.addHolding({
-          coinId: selectedCoin.id,
-          coinSymbol: selectedCoin.symbol,
-          coinName: selectedCoin.name,
-          coinImage: selectedCoin.image,
-          quantity: parseFloat(quantity),
+          coinId: data.coin!.id,
+          coinSymbol: data.coin!.symbol,
+          coinName: data.coin!.name,
+          coinImage: data.coin!.image,
+          quantity: parseFloat(data.quantity),
         });
 
         if (result.error) {
@@ -112,29 +120,23 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
       await addPromise;
 
       // Reset form
-      setSelectedCoin(null);
-      setSearchTerm('');
-      setQuantity('');
+      form.reset();
       setShowForm(false);
       onSuccess();
     } catch {
-      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    setSelectedCoin(null);
-    setSearchTerm('');
-    setQuantity('');
-    setError('');
+    form.reset();
     setShowForm(false);
   };
 
   if (!showForm) {
     return (
-      <div className="bg-gray-800 border border-gray-600/50 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-4 mb-6">
+      <Card className="hover:shadow-lg transition-shadow p-4 mb-6">
         <button
           onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-600/50 rounded-lg text-gray-300 hover:border-primary-500/50 hover:text-primary-400 transition-colors"
@@ -142,12 +144,12 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
           <Plus className="w-5 h-5" />
           Thêm coin vào danh mục đầu tư
         </button>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-600/50 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6 mb-6">
+    <Card className="hover:shadow-lg transition-shadow p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Thêm coin mới</h3>
         <button
@@ -158,105 +160,80 @@ export default function AddCoinBar({ onSuccess }: AddCoinBarProps) {
         </button>
       </div>
 
-      {error && (
-        <div className="bg-danger-500/20 border border-danger-500/40 text-danger-400 px-4 py-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Coin Selection */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Chọn coin
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setShowDropdown(true);
-                  if (e.target.value !== selectedCoin?.name) {
-                    setSelectedCoin(null);
-                  }
-                }}
-                onFocus={() => setShowDropdown(true)}
-                placeholder="Tìm kiếm coin..."
-                className="w-full px-3 py-2 border border-gray-700/40 bg-dark-600 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-8 placeholder-gray-400"
-              />
-              <Search className="absolute right-2 top-2.5 w-4 h-4 text-gray-400" />
-
-              {showDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-dark-700 border border-gray-700/40 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {coinsLoading ? (
-                    <div className="p-3 text-center">
-                      <Loader className="w-4 h-4 animate-spin mx-auto text-gray-400" />
-                    </div>
-                  ) : filteredCoins.length > 0 ? (
-                    filteredCoins.map((coin) => (
-                      <button
-                        key={coin.id}
-                        type="button"
-                        onClick={() => handleCoinSelect(coin)}
-                        className="w-full px-3 py-2 text-left hover:bg-dark-600 border-b border-gray-700/30 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-white">{coin.name}</span>
-                          <span className="text-sm text-gray-400">{coin.symbol.toUpperCase()}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-3 text-center text-gray-400 text-sm">
-                      Không tìm thấy coin nào
-                    </div>
-                  )}
-                </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Coin Selection */}
+            <FormField
+              control={form.control}
+              name="coin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-300">Chọn coin</FormLabel>
+                  <FormControl>
+                    {coinsLoading ? (
+                      <div className="flex items-center justify-center h-10 bg-dark-600 border border-gray-700/40 rounded-lg">
+                        <Loader className="w-4 h-4 animate-spin text-gray-400" />
+                      </div>
+                    ) : (
+                      <CoinCombobox
+                        coins={coins}
+                        value={field.value?.name || ''}
+                        onChange={field.onChange}
+                        placeholder="Tìm kiếm coin..."
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage className="text-danger-400" />
+                </FormItem>
               )}
+            />
+
+            {/* Quantity */}
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-300">Số lượng</FormLabel>
+                  <FormControl>
+                    <input
+                      {...field}
+                      type="number"
+                      step="any"
+                      min="0.00000001"
+                      placeholder="0.00000000"
+                      className="w-full px-3 py-2 border border-gray-700/40 bg-dark-600 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-400"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-danger-400" />
+                </FormItem>
+              )}
+            />
+
+            {/* Submit Button */}
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={loading || form.formState.isSubmitting}
+                className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 min-w-0"
+              >
+                {loading || form.formState.isSubmitting ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>Đang thêm...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Thêm</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
-
-          {/* Quantity */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Số lượng
-            </label>
-            <input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              step="any"
-              min="0.00000001"
-              placeholder="0.00000000"
-              className="w-full px-3 py-2 border border-gray-700/40 bg-dark-600 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-400"
-              required
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={loading || !selectedCoin || !quantity}
-              className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 min-w-0"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  <span>Đang thêm...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Thêm</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        </form>
+      </Form>
+    </Card>
   );
 }

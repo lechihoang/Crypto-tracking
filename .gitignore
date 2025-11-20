@@ -114,6 +114,8 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.kiro/
+.claude/
 
 # Vercel
 .vercel

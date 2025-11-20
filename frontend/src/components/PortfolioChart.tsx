@@ -6,6 +6,7 @@ import { portfolioApi } from '@/lib/api';
 import { TrendingUp } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 import { ChartDataPoint } from '@/types';
+import { Card } from '@/components/ui/card';
 const PortfolioChart = React.memo(function PortfolioChart() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ const PortfolioChart = React.memo(function PortfolioChart() {
   const CustomTooltip = useCallback(({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-lg">
           <p className="text-sm text-gray-100">{payload[0].payload.formattedDate}</p>
           <p className="text-lg font-semibold text-primary-500">
             {formatCurrencyDetailed(payload[0].value)}
@@ -110,17 +111,17 @@ const PortfolioChart = React.memo(function PortfolioChart() {
 
   if (loading) {
     return (
-      <div className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+      <Card className="hover:shadow-lg transition-shadow p-6">
         <div className="h-64">
           <LoadingSpinner size="lg" />
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+      <Card className="hover:shadow-lg transition-shadow p-6">
         <div className="text-center py-8">
           <p className="text-danger-400 mb-4">{error}</p>
           <button
@@ -130,12 +131,12 @@ const PortfolioChart = React.memo(function PortfolioChart() {
             Thử lại
           </button>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+    <Card className="hover:shadow-lg transition-shadow p-6">
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
           {[7, 30, 90].map((days) => (
@@ -233,7 +234,7 @@ const PortfolioChart = React.memo(function PortfolioChart() {
           </ResponsiveContainer>
         </div>
       )}
-    </div>
+    </Card>
   );
 });
 

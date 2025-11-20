@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, Wallet } from 'lucide-react';
 import { PortfolioValue } from '@/types';
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Type alias for holdings from PortfolioValue
 type HoldingData = PortfolioValue['holdings'][number];
@@ -24,7 +26,7 @@ const DashboardPortfolio = React.memo(function DashboardPortfolio({
 }: DashboardPortfolioProps) {
   if (coinsCount === 0) {
     return (
-      <div className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+      <Card className="hover:shadow-lg transition-shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Danh mục đầu tư</h3>
           <Link href="/portfolio" className="text-primary-500 hover:text-primary-600 text-sm font-semibold transition-colors">
@@ -46,12 +48,12 @@ const DashboardPortfolio = React.memo(function DashboardPortfolio({
             <span className="font-semibold">Quản lý danh mục</span>
           </Link>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+    <Card className="hover:shadow-lg transition-shadow p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Danh mục đầu tư</h3>
         <Link href="/portfolio" className="text-primary-500 hover:text-primary-600 text-sm font-semibold transition-colors">
@@ -59,11 +61,12 @@ const DashboardPortfolio = React.memo(function DashboardPortfolio({
         </Link>
       </div>
 
-      <div className="space-y-3 mb-4">
-        {holdings
-          .sort((a, b) => b.currentValue - a.currentValue)
-          .slice(0, 5)
-          .map((holding, index) => {
+      <ScrollArea className="h-[400px] mb-4">
+        <div className="space-y-3 pr-4">
+          {holdings
+            .sort((a, b) => b.currentValue - a.currentValue)
+            .slice(0, 5)
+            .map((holding, index) => {
             const { coinSymbol, coinName, coinImage, quantity } = holding.holding;
             const percentage = totalValue > 0 ? (holding.currentValue / totalValue * 100).toFixed(2) : '0';
 
@@ -111,14 +114,15 @@ const DashboardPortfolio = React.memo(function DashboardPortfolio({
               </div>
             );
           })}
-      </div>
+        </div>
+      </ScrollArea>
 
       {coinsCount > 5 && (
         <p className="text-sm text-gray-400 text-center">
           +{coinsCount - 5} coin khác
         </p>
       )}
-    </div>
+    </Card>
   );
 });
 

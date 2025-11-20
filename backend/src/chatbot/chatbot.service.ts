@@ -47,9 +47,6 @@ export class ChatbotService {
     }
   }
 
-  // ============================================================================
-  // Public API Methods - Chat Operations
-  // ============================================================================
 
   /**
    * Send a message to the chatbot and get a response
@@ -211,9 +208,6 @@ export class ChatbotService {
     }
   }
 
-  // ============================================================================
-  // Private Helper Methods
-  // ============================================================================
 
   /**
    * Get or create conversation with system prompt if needed
@@ -237,7 +231,6 @@ export class ChatbotService {
       }
     }
 
-    // Add system prompt for first message
     if (conversation.length === 0) {
       const systemMessage = await this.buildSystemPrompt(message);
       conversation.push(systemMessage);

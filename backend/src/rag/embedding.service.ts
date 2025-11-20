@@ -65,8 +65,6 @@ export class EmbeddingService {
 
       return finalEmbedding;
     } catch (error: unknown) {
-      console.error("Embedding service error:", error);
-
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
           throw new HttpException(
@@ -117,7 +115,6 @@ export class EmbeddingService {
 
       return results;
     } catch (error: unknown) {
-      console.error("Batch embedding error:", error);
       throw error;
     }
   }

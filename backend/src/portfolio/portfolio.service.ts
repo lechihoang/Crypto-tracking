@@ -26,9 +26,6 @@ export class PortfolioService {
     private cryptoService: CryptoService,
   ) {}
 
-  // ============================================================================
-  // Public API Methods - Holdings Management
-  // ============================================================================
 
   /**
    * Get all portfolio holdings for a user with coin information populated
@@ -38,16 +35,7 @@ export class PortfolioService {
    */
   async getHoldings(userId: string): Promise<PortfolioHolding[]> {
     try {
-      this.logger.debug(`Fetching holdings for user ${userId}`);
 
-      const holdings = await this.holdingModel
-        .find({ userId })
-        .sort({ createdAt: -1 })
-        .exec();
-
-      this.logger.debug(`Found ${holdings.length} holdings for user ${userId}`);
-
-      return this.populateCoinInfo(holdings);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -68,11 +56,7 @@ export class PortfolioService {
     createHoldingDto: CreateHoldingDto,
   ): Promise<PortfolioHolding> {
     try {
-      this.logger.debug(
-        `Adding holding for user ${userId}, coin ${createHoldingDto.coinId}`,
-      );
 
-      // Check if holding already exists
       const existingHolding = await this.holdingModel
         .findOne({ userId, coinId: createHoldingDto.coinId })
         .exec();
@@ -96,15 +80,10 @@ export class PortfolioService {
 
       const savedHolding = await holding.save();
 
-      this.logger.debug(
-        `Successfully added holding ${savedHolding._id} for user ${userId}`,
-      );
 
-      // Populate coin info before returning
       const populated = await this.populateCoinInfo([savedHolding]);
       return populated[0];
     } catch (error: unknown) {
-      // Re-throw known exceptions
       if (error instanceof ConflictException) {
         throw error;
       }
@@ -129,11 +108,6 @@ export class PortfolioService {
     updateHoldingDto: UpdateHoldingDto,
   ): Promise<PortfolioHolding> {
     try {
-      this.logger.debug(`Updating holding ${holdingId} for user ${userId}`);
-
-      const holding = await this.holdingModel
-        .findOne({ _id: holdingId, userId })
-        .exec();
 
       if (!holding) {
         this.logger.warn(`Holding ${holdingId} not found for user ${userId}`);
@@ -143,15 +117,10 @@ export class PortfolioService {
       Object.assign(holding, updateHoldingDto);
       const savedHolding = await holding.save();
 
-      this.logger.debug(
-        `Successfully updated holding ${holdingId} for user ${userId}`,
-      );
 
-      // Populate coin info before returning
       const populated = await this.populateCoinInfo([savedHolding]);
       return populated[0];
     } catch (error: unknown) {
-      // Re-throw known exceptions
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -172,25 +141,13 @@ export class PortfolioService {
 
   async removeHolding(userId: string, holdingId: string): Promise<void> {
     try {
-      this.logger.debug(`Removing holding ${holdingId} for user ${userId}`);
-
-      const result = await this.holdingModel
-        .deleteOne({
-          _id: holdingId,
-          userId,
-        })
-        .exec();
 
       if (result.deletedCount === 0) {
         this.logger.warn(`Holding ${holdingId} not found for user ${userId}`);
         throw new NotFoundException("Holding not found");
       }
 
-      this.logger.debug(
-        `Successfully removed holding ${holdingId} for user ${userId}`,
-      );
     } catch (error: unknown) {
-      // Re-throw known exceptions
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -227,18 +184,8 @@ export class PortfolioService {
     }>;
   }> {
     try {
-      this.logger.debug(`Calculating portfolio value for user ${userId}`);
-
-      // getHoldings already populates coin info and handles errors
-      const holdings = await this.getHoldings(userId);
 
       if (holdings.length === 0) {
-        this.logger.debug(`No holdings found for user ${userId}`);
-        return { totalValue: 0, holdings: [] };
-      }
-
-      // Get current prices for all coins
-      const coinIds = holdings.map((h) => h.coinId);
 
       let prices: Record<string, { usd: number }>;
       try {
@@ -284,13 +231,9 @@ export class PortfolioService {
         };
       });
 
-      this.logger.debug(
-        `Successfully calculated portfolio value for user ${userId}: $${totalValue.toFixed(2)}`,
-      );
 
       return { totalValue, holdings: enrichedHoldings };
     } catch (error: unknown) {
-      // Re-throw HttpException (from getHoldings or price fetch)
       if (error instanceof HttpException) {
         throw error;
       }
@@ -327,9 +270,6 @@ export class PortfolioService {
     try {
       const coinIds = holdings.map((h) => h.coinId);
 
-      this.logger.debug(
-        `Fetching portfolio value history for user ${userId} with ${coinIds.length} holdings over ${days} days`,
-      );
 
       const priceHistories = await this.fetchPriceHistories(coinIds, days);
       const { priceMap, sortedTimestamps } = this.buildPriceMap(priceHistories);
@@ -339,9 +279,6 @@ export class PortfolioService {
         sortedTimestamps,
       );
 
-      this.logger.debug(
-        `Successfully calculated portfolio history with ${portfolioHistory.length} data points`,
-      );
 
       return { data: portfolioHistory };
     } catch (error: unknown) {
@@ -359,18 +296,12 @@ export class PortfolioService {
     }
   }
 
-  // ============================================================================
-  // Public API Methods - Benchmark Management
-  // ============================================================================
 
   async setBenchmark(
     userId: string,
     benchmarkValue: number,
   ): Promise<{ userId: string; benchmarkValue: number }> {
     try {
-      this.logger.debug(
-        `Setting benchmark for user ${userId} to ${benchmarkValue}`,
-      );
 
       // Update or create a single benchmark document for this user
       const snapshot = await this.snapshotModel
@@ -386,24 +317,6 @@ export class PortfolioService {
         throw new NotFoundException("Failed to set benchmark");
       }
 
-      this.logger.debug(`Successfully set benchmark for user ${userId}`);
-
-      return {
-        userId: snapshot.userId,
-        benchmarkValue: snapshot.benchmarkValue,
-      };
-    } catch (error: unknown) {
-      // Re-throw known exceptions
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(
-        `Failed to set benchmark for user ${userId}: ${errorMessage}`,
-        error instanceof Error ? error.stack : undefined,
-      );
 
       throw new HttpException(
         "Failed to set benchmark. Please try again later.",
@@ -418,28 +331,8 @@ export class PortfolioService {
     updatedAt: Date;
   } | null> {
     try {
-      this.logger.debug(`Fetching benchmark for user ${userId}`);
-
-      // Get the single benchmark document for this user
-      const snapshot = await this.snapshotModel.findOne({ userId }).exec();
 
       if (!snapshot) {
-        this.logger.debug(`No benchmark found for user ${userId}`);
-        return null;
-      }
-
-      return {
-        userId: snapshot.userId,
-        benchmarkValue: snapshot.benchmarkValue,
-        updatedAt: (snapshot as any).updatedAt,
-      };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(
-        `Failed to fetch benchmark for user ${userId}: ${errorMessage}`,
-        error instanceof Error ? error.stack : undefined,
-      );
 
       throw new HttpException(
         "Failed to fetch benchmark. Please try again later.",
@@ -450,31 +343,12 @@ export class PortfolioService {
 
   async deleteBenchmark(userId: string): Promise<void> {
     try {
-      this.logger.debug(`Deleting benchmark for user ${userId}`);
-
-      // Set benchmarkValue to 0 instead of deleting
-      const snapshot = await this.snapshotModel
-        .findOneAndUpdate({ userId }, { benchmarkValue: 0 }, { new: true })
-        .exec();
 
       if (!snapshot) {
         this.logger.warn(`No benchmark found for user ${userId}`);
         throw new NotFoundException("No benchmark found");
       }
 
-      this.logger.debug(`Successfully deleted benchmark for user ${userId}`);
-    } catch (error: unknown) {
-      // Re-throw known exceptions
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(
-        `Failed to delete benchmark for user ${userId}: ${errorMessage}`,
-        error instanceof Error ? error.stack : undefined,
-      );
 
       throw new HttpException(
         "Failed to delete benchmark. Please try again later.",
@@ -483,9 +357,6 @@ export class PortfolioService {
     }
   }
 
-  // ============================================================================
-  // Private Helper Methods
-  // ============================================================================
 
   /**
    * Helper method to populate coin info (name, symbol, image) from CryptoService
@@ -506,7 +377,6 @@ export class PortfolioService {
         const holdingObj = holding.toObject();
 
         if (coinInfo) {
-          // Add coin info to holding object (not stored in DB, just for response)
           return {
             ...holdingObj,
             coinName: coinInfo.name,
@@ -525,7 +395,6 @@ export class PortfolioService {
         error instanceof Error ? error.stack : undefined,
       );
 
-      // Return holdings without coin info rather than failing completely
       this.logger.warn(
         "Returning holdings without coin info due to API failure",
       );
@@ -565,7 +434,6 @@ export class PortfolioService {
         priceHistories.push({ coinId, prices: [] });
       }
 
-      // Add small delay between requests to avoid overwhelming the API
       if (uniqueCoinIds.indexOf(coinId) < uniqueCoinIds.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }

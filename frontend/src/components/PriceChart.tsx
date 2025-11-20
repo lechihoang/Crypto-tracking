@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { clientApi } from '@/lib/api';
 import LoadingSpinner from './LoadingSpinner';
 import { PriceChartData } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface PriceChartProps {
   symbol: string;
@@ -103,11 +104,11 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
 
   if (loading) {
     return (
-      <div className="bg-gray-800 p-6 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50">
+      <Card className="p-6">
         <div className="h-80">
           <LoadingSpinner size="lg" />
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -132,7 +133,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
   }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+        <div className="bg-[#23242a] p-3 border border-gray-600/50 rounded-lg shadow-lg">
           <p className="text-gray-100">{`Date: ${label}`}</p>
           <p className="text-primary-500 font-semibold">
             {`Price: ${formatPrice(payload[0].value)}`}
@@ -144,7 +145,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all border border-gray-600/50">
+    <Card className="hover:shadow-lg transition-shadow p-6">
       <div className="mb-6">
         <div className="flex flex-wrap gap-2 mb-4">
           {['1d', '7d', '30d', '90d', '1y'].map((period) => (
@@ -206,7 +207,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ symbol, currentPrice, coinId })
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 };
 

@@ -10,9 +10,6 @@ export class UserService {
     private userModel: Model<User>,
   ) {}
 
-  // ============================================================================
-  // Public API Methods - User Management
-  // ============================================================================
 
   async getUser(userId: string): Promise<User> {
     let user = await this.userModel.findOne({ userId }).exec();
@@ -93,9 +90,6 @@ export class UserService {
     return await user.save();
   }
 
-  // ============================================================================
-  // Public API Methods - Notification Settings
-  // ============================================================================
 
   async isEmailNotificationEnabled(userId: string): Promise<boolean> {
     const user = await this.getUser(userId);

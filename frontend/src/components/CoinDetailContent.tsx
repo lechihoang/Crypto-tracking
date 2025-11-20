@@ -1,7 +1,8 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Globe, MessageCircle, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { CryptoCurrency, CoinInfo } from '@/types/crypto';
 import PriceChart from '@/components/PriceChart';
+import { Card, CardContent } from '@/components/ui/card';
 
 const formatPrice = (price: number) => {
   if (price < 0.01) return `$${price.toFixed(6)}`;
@@ -38,7 +39,7 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Price Info */}
         <div className="lg:col-span-2">
-          <div className="bg-gray-800 p-8 rounded-xl mb-8 border border-gray-600/50" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+          <Card className="p-8 mb-8">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-4xl font-bold text-gray-50">
@@ -82,7 +83,7 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
                 <p className="font-semibold text-gray-50">{formatMarketCap(coin.quote?.USD.volume_24h || 0)}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Price Chart */}
           <PriceChart symbol={coin.symbol} currentPrice={coin.quote?.USD.price || 0} coinId={coinId} />
@@ -91,37 +92,37 @@ export default function CoinDetailContent({ coin, coinInfo, coinId }: CoinDetail
         {/* Coin Info Sidebar */}
         <div className="space-y-6">
           {/* Market Stats */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-600/50" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-            <h3 className="text-lg font-semibold text-gray-50 mb-4">Thống kê thị trường</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-100">Vốn hóa thị trường</span>
-                <span className="font-semibold text-gray-50">{formatMarketCap(coin.quote?.USD.market_cap || 0)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-100">Nguồn cung lưu hành</span>
-                <span className="font-semibold text-gray-50">{formatSupply(coin.circulating_supply || 0)} {coin.symbol}</span>
-              </div>
-              {coin.total_supply && (
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-50 mb-4">Thống kê thị trường</h3>
+              <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-100">Tổng nguồn cung</span>
-                  <span className="font-semibold text-gray-50">{formatSupply(coin.total_supply)} {coin.symbol}</span>
+                  <span className="text-gray-100">Vốn hóa thị trường</span>
+                  <span className="font-semibold text-gray-50">{formatMarketCap(coin.quote?.USD.market_cap || 0)}</span>
                 </div>
-              )}
-              {coin.max_supply && (
                 <div className="flex justify-between">
-                  <span className="text-gray-100">Nguồn cung tối đa</span>
-                  <span className="font-semibold text-gray-50">{formatSupply(coin.max_supply)} {coin.symbol}</span>
+                  <span className="text-gray-100">Nguồn cung lưu hành</span>
+                  <span className="font-semibold text-gray-50">{formatSupply(coin.circulating_supply || 0)} {coin.symbol}</span>
                 </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-100">Cặp giao dịch</span>
-                <span className="font-semibold text-gray-50">{coinInfo?.num_market_pairs || coin.num_market_pairs || 0}</span>
+                {coin.total_supply && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-100">Tổng nguồn cung</span>
+                    <span className="font-semibold text-gray-50">{formatSupply(coin.total_supply)} {coin.symbol}</span>
+                  </div>
+                )}
+                {coin.max_supply && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-100">Nguồn cung tối đa</span>
+                    <span className="font-semibold text-gray-50">{formatSupply(coin.max_supply)} {coin.symbol}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-100">Cặp giao dịch</span>
+                  <span className="font-semibold text-gray-50">{coinInfo?.num_market_pairs || coin.num_market_pairs || 0}</span>
+                </div>
               </div>
-            </div>
-          </div>
-
-
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>

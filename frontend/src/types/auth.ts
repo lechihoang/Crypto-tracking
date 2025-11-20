@@ -20,7 +20,6 @@ export interface AuthContextType {
   checkAuthStatus: () => Promise<void>;
 }
 
-// Auth API Request types
 export interface SignInRequest {
   email: string;
   password: string;
@@ -46,7 +45,6 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
-// Auth API Response types
 export interface AuthResponse {
   user?: User;
   access_token?: string;

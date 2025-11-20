@@ -17,7 +17,6 @@ export const CurrentUser = createParamDecorator(
     // Store token in request for services to use
     request["authToken"] = token;
 
-    // Return the token so services can fetch user info
     // The actual user fetching is done in the controller/service
     return token;
   },

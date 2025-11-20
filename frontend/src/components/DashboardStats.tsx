@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart3, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
 import { DashboardStat } from '@/types';
+import { Card } from '@/components/ui/card';
 
 interface DashboardStatsProps {
   stats?: DashboardStat[];
@@ -41,7 +42,7 @@ const DashboardStats = React.memo(function DashboardStats({ stats = defaultStats
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {stats.map((stat) => (
-        <div key={stat.title} className="bg-gray-800 border border-gray-600/50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all p-6">
+        <Card key={stat.title} className="hover:shadow-lg transition-shadow p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300 mb-1">{stat.title}</p>
@@ -68,7 +69,7 @@ const DashboardStats = React.memo(function DashboardStats({ stats = defaultStats
               }`} />
             </div>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

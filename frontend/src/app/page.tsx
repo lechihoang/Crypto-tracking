@@ -12,7 +12,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-12 gap-6">
           {/* Section 1: 12 cột trên mobile/tablet, 5 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-5 bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 flex flex-col justify-between p-8 hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-5 bg-gray-800 rounded-xl shadow-md border border-gray-600/50 flex flex-col justify-between p-8 hover:shadow-lg transition-all duration-300">
             <div>
               <h1 className="text-5xl xl:text-6xl text-white font-bold mb-20">
                 Theo dõi crypto của bạn dễ dàng với <span className="text-primary-500">Crypto Tracker</span>
@@ -27,7 +27,7 @@ export default function Home() {
           </section>
 
           {/* Section 2: 12 cột trên mobile/tablet, 7 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-7 bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-7 bg-gray-800 rounded-xl shadow-md border border-gray-600/50 overflow-hidden hover:shadow-lg transition-all duration-300">
             <Image
               src="/images/dashboard-preview.png"
               alt="Dashboard Preview"
@@ -39,7 +39,7 @@ export default function Home() {
         </div>
 
         {/* Section 3: Floating coins section */}
-        <div className="relative mt-16 py-20 overflow-hidden bg-gray-800 rounded-3xl border border-gray-600/50 shadow-[0_2px_8px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+        <div className="relative mt-16 py-20 overflow-hidden bg-gray-800 rounded-3xl border border-gray-600/50 shadow-md hover:shadow-lg transition-all duration-300">
           {/* Floating coins with real icons - Nhiều đồng coin hơn */}
           <div className="absolute top-10 left-10 animate-bounce">
             <SiBitcoin className="text-6xl text-orange-500" />
@@ -102,7 +102,7 @@ export default function Home() {
         {/* Section 5: So sánh giá real-time - 6/6 */}
         <div className="grid grid-cols-12 gap-6 mt-16">
           {/* Compare Price Content: 6 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-6 bg-gray-800 p-8 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-6 bg-gray-800 p-8 rounded-xl shadow-md border border-gray-600/50 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
             <div className="mb-8">
               <h2 className="text-5xl font-bold text-white mb-8">
                 <span className="text-success-500">So sánh giá</span> real-time
@@ -123,7 +123,7 @@ export default function Home() {
           </section>
 
           {/* Compare Price Image/Preview: 6 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-6 bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-6 bg-gray-800 rounded-xl shadow-md border border-gray-600/50 overflow-hidden hover:shadow-lg transition-all duration-300">
             <Image
               src="/images/price-alert-preview.png"
               alt="Price Comparison Preview"
@@ -137,7 +137,7 @@ export default function Home() {
         {/* Section 6: Chatbot Crypto - 6/6 */}
         <div className="grid grid-cols-12 gap-6 mt-16">
           {/* Chatbot Image/Preview: 6 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-6 bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-6 bg-gray-800 rounded-xl shadow-md border border-gray-600/50 overflow-hidden hover:shadow-lg transition-all duration-300">
             <Image
               src="/images/chatbot-preview.jpg"
               alt="Chatbot Preview"
@@ -148,7 +148,7 @@ export default function Home() {
           </section>
 
           {/* Chatbot Content: 6 cột trên desktop */}
-          <section className="col-span-12 xl:col-span-6 bg-gray-800 p-8 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50 flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300">
+          <section className="col-span-12 xl:col-span-6 bg-gray-800 p-8 rounded-xl shadow-md border border-gray-600/50 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
             <div className="mb-8">
               <h2 className="text-5xl font-bold text-white mb-8">
                 <span className="text-primary-500">AI Chatbot</span> hỗ trợ crypto

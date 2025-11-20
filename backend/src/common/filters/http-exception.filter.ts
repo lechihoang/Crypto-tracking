@@ -27,7 +27,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Log the error with full context
     this.logError(exception, request, errorResponse);
 
-    // Return consistent error response format
     response.status(errorResponse.statusCode).json(errorResponse);
   }
 

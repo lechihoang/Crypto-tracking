@@ -7,7 +7,11 @@ import { User, Lock, Mail, ArrowRight, Loader, Save, Bell } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 const ProfileSchema = z.object({
   fullName: z.string().min(1, 'Họ tên không được để trống'),
@@ -108,7 +112,6 @@ export default function SettingsPage() {
   const onSubmit = async () => {
     setSaving(true);
     try {
-      // TODO: Implement API call to update profile
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Cập nhật thông tin thành công!');
       setIsEditing(false);
@@ -198,16 +201,16 @@ export default function SettingsPage() {
 
         <div className="space-y-6">
           {/* Profile Information Card */}
-          <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50">
-            <div className="px-6 py-5 border-b border-gray-600/50">
+          <Card className="shadow-md">
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
                     <User className="w-5 h-5 text-primary-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white">Thông tin cá nhân</h3>
-                    <p className="text-sm text-gray-100">Cập nhật thông tin tài khoản của bạn</p>
+                    <CardTitle>Thông tin cá nhân</CardTitle>
+                    <CardDescription>Cập nhật thông tin tài khoản của bạn</CardDescription>
                   </div>
                 </div>
                 {!isEditing && (
@@ -219,9 +222,9 @@ export default function SettingsPage() {
                   </button>
                 )}
               </div>
-            </div>
+            </CardHeader>
 
-            <div className="p-6">
+            <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Full Name */}
                 <div>
@@ -298,24 +301,26 @@ export default function SettingsPage() {
                   </div>
                 )}
               </form>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
 
           {/* Security Card */}
-          <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50">
-            <div className="px-6 py-5 border-b border-gray-600/50">
+          <Card className="shadow-md">
+            <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
                   <Lock className="w-5 h-5 text-primary-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Bảo mật</h3>
-                  <p className="text-sm text-gray-100">Quản lý mật khẩu và bảo mật tài khoản</p>
+                  <CardTitle>Bảo mật</CardTitle>
+                  <CardDescription>Quản lý mật khẩu và bảo mật tài khoản</CardDescription>
                 </div>
               </div>
-            </div>
+            </CardHeader>
 
-            <div className="p-6">
+            <CardContent>
               <div className="space-y-4">
                 {/* Change Password */}
                 <button
@@ -334,24 +339,26 @@ export default function SettingsPage() {
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-400 transition-colors" />
                 </button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
 
           {/* Notifications Card */}
-          <div className="bg-gray-800 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-gray-600/50">
-            <div className="px-6 py-5 border-b border-gray-600/50">
+          <Card className="shadow-md">
+            <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
                   <Bell className="w-5 h-5 text-primary-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Thông báo</h3>
-                  <p className="text-sm text-gray-100">Quản lý cách nhận thông báo cảnh báo giá</p>
+                  <CardTitle>Thông báo</CardTitle>
+                  <CardDescription>Quản lý cách nhận thông báo cảnh báo giá</CardDescription>
                 </div>
               </div>
-            </div>
+            </CardHeader>
 
-            <div className="p-6">
+            <CardContent>
               <div className="space-y-6">
                 {/* Email Notifications Toggle */}
                 <div className="flex items-center justify-between p-4 border border-gray-600 rounded-lg">
@@ -364,22 +371,22 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-100">Nhận email khi cảnh báo giá được kích hoạt</p>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={emailNotifications}
-                      onChange={(e) => handleEmailNotificationToggle(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                  </label>
+                  <Switch
+                    checked={emailNotifications}
+                    onCheckedChange={handleEmailNotificationToggle}
+                  />
                 </div>
 
                 {/* Email Info */}
                 <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
-                  <p className="text-sm text-primary-300 font-medium mb-1">
-                    Email thông báo
-                  </p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm text-primary-300 font-medium">
+                      Email thông báo
+                    </p>
+                    <Badge variant={emailNotifications ? "default" : "secondary"}>
+                      {emailNotifications ? "Đang bật" : "Đã tắt"}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-primary-200">
                     Thông báo sẽ được gửi đến: <strong>{user?.email}</strong>
                   </p>
@@ -395,8 +402,8 @@ export default function SettingsPage() {
                   </ul>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

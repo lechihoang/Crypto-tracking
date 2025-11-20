@@ -95,9 +95,6 @@ export class AlertsController {
     try {
       const user = await this.getUserFromToken(token);
       const alerts = await this.alertsService.getTriggeredAlerts(user.id);
-      this.logger.debug(
-        `Returning ${alerts.length} triggered alerts for user ${user.id}`,
-      );
       return alerts;
     } catch (error: unknown) {
       const errorMessage =

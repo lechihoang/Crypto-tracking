@@ -50,23 +50,13 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.signIn(signInDto);
-    console.log("SignIn result:", {
-      hasUser: !!result.user,
-      hasSession: !!result.session,
-      hasAccessToken: !!result.session?.access_token,
-      accessTokenLength: result.session?.access_token?.length,
-    });
 
-    // Set HttpOnly cookies for tokens
     this.setAuthCookies(
       res,
       result.session.access_token,
       result.session.id_token,
     );
 
-    console.log("Tokens set in HttpOnly cookies");
-
-    // Return only user info, no tokens
     return {
       user: {
         id: result.user.id,

@@ -1,11 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { portfolioApi } from '@/lib/api';
-import toast from 'react-hot-toast';
-
+import { toast } from 'sonner';
 import { HoldingWithValue } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface EditHoldingModalProps {
   isOpen: boolean;
@@ -62,7 +72,6 @@ export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }
       onSuccess();
       handleClose();
     } catch {
-      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
@@ -73,82 +82,77 @@ export default function EditHoldingModal({ isOpen, holding, onClose, onSuccess }
     onClose();
   };
 
-  if (!isOpen || !holding) return null;
+  if (!holding) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-800 border border-gray-600/50 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-600/50">
-          <h3 className="text-lg font-semibold text-white">Sửa {holding.coinName}</h3>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-300 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !loading && handleClose()}>
+      <DialogContent className="bg-gray-800 border-gray-600/50 sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-white">Sửa {holding.coinName}</DialogTitle>
+          <DialogDescription className="text-gray-300">
+            Cập nhật số lượng {holding.coinSymbol.toUpperCase()} trong danh mục của bạn
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-6">
-          {/* Coin Info */}
-          <div className="mb-6 p-4 bg-gray-700 border border-gray-600/50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-white">{holding.coinName}</p>
-                <p className="text-sm text-gray-300">{holding.coinSymbol.toUpperCase()}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Giá hiện tại</p>
-                <p className="font-semibold text-white">
-                  ${Number(holding.currentPrice).toFixed(2)}
-                </p>
-              </div>
+        {/* Coin Info */}
+        <div className="p-4 bg-gray-700 border border-gray-600/50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-white">{holding.coinName}</p>
+              <p className="text-sm text-gray-300">{holding.coinSymbol.toUpperCase()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Giá hiện tại</p>
+              <p className="font-semibold text-white">
+                ${Number(holding.currentPrice).toFixed(2)}
+              </p>
             </div>
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Quantity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Số lượng *
-              </label>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                step="any"
-                min="0.00000001"
-                placeholder="0.00000000"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-500"
-                required
-              />
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !quantity}
-                className="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? (
-                  <Loader className="w-4 h-4 animate-spin mx-auto" />
-                ) : (
-                  'Cập nhật'
-                )}
-              </button>
-            </div>
-          </form>
         </div>
-      </div>
-    </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="quantity" className="text-gray-300">
+              Số lượng *
+            </Label>
+            <Input
+              id="quantity"
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              step="any"
+              min="0.00000001"
+              placeholder="0.00000000"
+              className="bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+              required
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || !quantity}
+              className="bg-primary-500 hover:bg-primary-600"
+            >
+              {loading ? (
+                <Loader className="w-4 h-4 animate-spin mx-auto" />
+              ) : (
+                'Cập nhật'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

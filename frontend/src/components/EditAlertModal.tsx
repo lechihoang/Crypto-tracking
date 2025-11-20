@@ -3,10 +3,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { alertsApi } from '@/lib/api';
 import { formatNumber } from '@/utils/formatPrice';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import { PriceAlert } from '@/types/alerts';
 import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface EditAlertModalProps {
   isOpen: boolean;
@@ -92,35 +101,22 @@ export default function EditAlertModal({ isOpen, onClose, alert, onSuccess }: Ed
         onClose();
       }, 1000);
     } catch {
-      // Error already handled by toast.promise
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-800 rounded-xl shadow-card border border-gray-600/50 max-w-md w-full max-h-[90vh] overflow-y-auto backdrop-blur-sm">
-        <div className="flex items-center justify-between p-6 border-b border-gray-600/30">
-          <h3 className="text-lg font-semibold text-white">Chỉnh sửa cảnh báo</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-all duration-300"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Chỉnh sửa cảnh báo</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Coin Info (Read-only) */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-100 mb-2">
-              Đồng coin
-            </label>
+          <div>
+            <Label>Đồng coin</Label>
             <div className="p-3 border border-gray-600 rounded-lg bg-gray-700/50 flex items-center gap-3">
               {alert.coinImage ? (
                 <Image
@@ -149,10 +145,8 @@ export default function EditAlertModal({ isOpen, onClose, alert, onSuccess }: Ed
           </div>
 
           {/* Condition Selection - Custom Dropdown */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-100 mb-2">
-              Điều kiện
-            </label>
+          <div>
+            <Label>Điều kiện</Label>
             <div className="relative" ref={dropdownRef}>
               {/* Dropdown Button */}
               <button
@@ -168,7 +162,7 @@ export default function EditAlertModal({ isOpen, onClose, alert, onSuccess }: Ed
 
               {/* Dropdown Options */}
               {isDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-dark-600 border border-gray-700 rounded-lg shadow-card">
+                <div className="absolute z-10 w-full mt-1 bg-dark-600 border border-gray-700 rounded-lg shadow-xl">
                   {conditions.map((cond) => (
                     <div
                       key={cond.value}
@@ -188,17 +182,15 @@ export default function EditAlertModal({ isOpen, onClose, alert, onSuccess }: Ed
           </div>
 
           {/* Price Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-100 mb-2">
-              Giá mục tiêu (USD)
-            </label>
-            <input
+          <div>
+            <Label htmlFor="targetPrice">Giá mục tiêu (USD)</Label>
+            <Input
+              id="targetPrice"
               type="number"
               step="0.000001"
               value={targetPrice}
               onChange={(e) => setTargetPrice(e.target.value)}
               placeholder="Nhập giá mục tiêu"
-              className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-gray-50 placeholder-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300"
               required
             />
             <p className="text-sm text-gray-400 mt-2">
@@ -206,24 +198,25 @@ export default function EditAlertModal({ isOpen, onClose, alert, onSuccess }: Ed
             </p>
           </div>
 
-          <div className="flex space-x-3">
-            <button
+          <div className="flex gap-3">
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border-2 border-gray-700 rounded-lg text-gray-300 bg-dark-700 hover:bg-dark-600 hover:border-gray-600 focus:ring-2 focus:ring-primary-500 transition-all duration-300 font-medium"
+              className="flex-1"
             >
               Hủy
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 rounded-lg text-white bg-primary-500 hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
+              className="flex-1"
             >
               {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

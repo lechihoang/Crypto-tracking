@@ -6,6 +6,7 @@ import axios from 'axios';
 import DOMPurify from 'dompurify';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatMessage } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: '1',
@@ -45,15 +46,26 @@ export default function ChatWindow() {
             params: { userId: user.id },
           });
 
-          if (response.data.messages && response.data.messages.length > 0) {
+          if (!response.data || !Array.isArray(response.data.messages)) {
+            setMessages([INITIAL_MESSAGE]);
+            setIsLoadingHistory(false);
+            return;
+          }
+
+          if (response.data.messages.length > 0) {
             const loadedMessages = response.data.messages
-              .filter((msg: { role: string; id: string; content: string; timestamp: string }) => msg.role !== 'system') // Don't show system messages
-              .map((msg: { role: 'user' | 'assistant'; id: string; content: string; timestamp: string; userId?: string; sessionId?: string }) => ({
+              .filter((msg: { role: string; id: string; content: string; timestamp: string }) => {
+                if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role)) {
+                  return false;
+                }
+                return msg.role !== 'system';
+              })
+              .map((msg: { role: 'user' | 'assistant'; id: string; content: string; timestamp: string; userId?: string; sessionId?: string }): ChatMessage => ({
                 id: msg.id,
                 userId: msg.userId || null,
                 sessionId: msg.sessionId || response.data.sessionId || 'loaded',
                 content: msg.content,
-                role: msg.role,
+                role: msg.role, // Explicitly preserve role
                 timestamp: msg.timestamp,
               }));
 
@@ -67,8 +79,6 @@ export default function ChatWindow() {
             }
           }
         } catch (error) {
-          console.error('Failed to load chat history:', error);
-          // Don't show error to user, just use initial message
           setMessages([INITIAL_MESSAGE]);
         } finally {
           setIsLoadingHistory(false);
@@ -143,8 +153,6 @@ export default function ChatWindow() {
       }
 
     } catch (error) {
-      console.error('Chat error:', error);
-
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         userId: null,
@@ -169,7 +177,6 @@ export default function ChatWindow() {
           params: { userId: user.id },
         });
       } catch (error) {
-        console.error('Failed to clear chat history:', error);
       }
     } else {
       // For guests, clear localStorage
@@ -219,7 +226,8 @@ export default function ChatWindow() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-dark-800">
+      <ScrollArea className="flex-1 bg-dark-800">
+        <div className="p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -288,7 +296,8 @@ export default function ChatWindow() {
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      </ScrollArea>
 
       {/* Input Area */}
       <div className="border-t border-gray-700/40 p-4 bg-dark-600/50">

@@ -363,7 +363,6 @@ export class CryptoService {
           `https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest`,
         );
 
-        // Return limited number of articles
         return response.data.Data.slice(0, limit).map((article) => ({
           id: article.id,
           title: article.title,

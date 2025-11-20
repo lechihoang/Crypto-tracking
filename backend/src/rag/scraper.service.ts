@@ -82,7 +82,6 @@ export class ScraperService {
             categoryContent += ` Top coins in this category include: ${category.top_3_coins.join(", ")}.`;
           }
 
-          // Add general knowledge about common categories
           const categoryKnowledge = this.getCategoryKnowledge(
             category.id || category.name,
           );
@@ -122,11 +121,8 @@ export class ScraperService {
 
   /**
    * Get trending coins and searches
-   * Returns trending coins with context about why they're trending
    */
   async getTrendingData(): Promise<ScrapedContent[]> {
-    console.log(`[CoinGecko API] Fetching trending data...`);
-
     const content: ScrapedContent[] = [];
 
     try {
@@ -156,9 +152,7 @@ export class ScraperService {
       );
 
       const trending: TrendingResponse = response.data;
-      console.log(`[CoinGecko API] Found trending data`);
 
-      // Process trending coins
       if (trending.coins && trending.coins.length > 0) {
         for (const item of trending.coins) {
           const coin = item.item;
@@ -188,31 +182,19 @@ export class ScraperService {
             source: "CoinGecko API - Trending",
             publishedAt: new Date(),
           });
-
-          console.log(`[CoinGecko API] ✓ Added trending: ${coin.name}`);
         }
       }
 
-      console.log(
-        `[CoinGecko API] Completed. ${content.length} trending items added`,
-      );
       return content;
     } catch (error: unknown) {
-      console.error(
-        "[CoinGecko API] Trending error:",
-        error instanceof Error ? error.message : String(error),
-      );
       return [];
     }
   }
 
   /**
    * Get global cryptocurrency market data
-   * Returns market overview, DeFi stats, market dominance
    */
   async getGlobalData(): Promise<ScrapedContent[]> {
-    console.log(`[CoinGecko API] Fetching global market data...`);
-
     const content: ScrapedContent[] = [];
 
     try {
@@ -237,7 +219,6 @@ export class ScraperService {
       );
 
       const globalData: GlobalData = response.data.data;
-      console.log(`[CoinGecko API] Received global market data`);
 
       // Overall market overview
       let marketOverview = `The global cryptocurrency market capitalization is $${(globalData.total_market_cap.usd / 1e12).toFixed(2)} trillion`;
@@ -322,26 +303,16 @@ export class ScraperService {
         });
       }
 
-      console.log(
-        `[CoinGecko API] Completed. ${content.length} global market insights added`,
-      );
       return content;
     } catch (error: unknown) {
-      console.error(
-        "[CoinGecko API] Global data error:",
-        error instanceof Error ? error.message : String(error),
-      );
       return [];
     }
   }
 
   /**
    * Get top 100 cryptocurrencies by market cap
-   * Returns detailed market data including price, volume, and changes
    */
   async getTopCoinsData(): Promise<ScrapedContent[]> {
-    console.log(`[CoinGecko API] Fetching top 100 coins by market cap...`);
-
     const content: ScrapedContent[] = [];
 
     try {
@@ -372,19 +343,12 @@ export class ScraperService {
       );
 
       const coins: CoinMarketData[] = response.data;
-      console.log(`[CoinGecko API] Found ${coins.length} coins`);
 
       for (const coin of coins) {
         try {
-          // Skip coins without price data
           if (coin.current_price === null) {
-            console.log(
-              `[CoinGecko API] ⚠ Skipping ${coin.name} - no price data`,
-            );
             continue;
           }
-
-          // Build comprehensive market data description
           let coinContent = `${coin.name} (${coin.symbol.toUpperCase()})`;
 
           if (coin.market_cap_rank) {
@@ -397,17 +361,14 @@ export class ScraperService {
 
           coinContent += `.`;
 
-          // Add current price
           coinContent += ` The current price is ${this.formatCurrency(coin.current_price)}`;
 
-          // Add price change if available
           if (coin.price_change_percentage_24h !== null) {
             coinContent += `, ${this.formatPriceChange(coin.price_change_percentage_24h)} in the last 24 hours`;
           }
 
           coinContent += `.`;
 
-          // Add trading volume if available
           if (coin.total_volume) {
             coinContent += ` The 24-hour trading volume is ${this.formatCurrency(coin.total_volume)}.`;
           }
@@ -419,42 +380,24 @@ export class ScraperService {
             source: "CoinGecko API - Markets",
             publishedAt: new Date(),
           });
-
-          console.log(
-            `[CoinGecko API] ✓ Added coin: ${coin.name} (${coin.symbol.toUpperCase()})`,
-          );
         } catch (error: unknown) {
-          console.error(
-            `[CoinGecko API] Error processing coin ${coin.name}:`,
-            error instanceof Error ? error.message : String(error),
-          );
+          // Skip failed coins
         }
       }
 
-      console.log(
-        `[CoinGecko API] Completed. ${content.length} coins added`,
-      );
       return content;
     } catch (error: unknown) {
-      console.error(
-        "[CoinGecko API] Top coins error:",
-        error instanceof Error ? error.message : String(error),
-      );
       return [];
     }
   }
 
   /**
    * Get all CoinGecko data at once
-   * Combines top coins, categories, trending, and global data
    */
   async getAllCoinGeckoData(): Promise<ScrapedContent[]> {
-    console.log(`[CoinGecko API] Fetching ALL data...`);
-
     const allContent: ScrapedContent[] = [];
 
     try {
-      // Fetch all data sources
       const [categories, trending, topCoins, global] = await Promise.all([
         this.getCategoriesData(),
         this.getTrendingData(),
@@ -467,21 +410,9 @@ export class ScraperService {
       allContent.push(...topCoins);
       allContent.push(...global);
 
-      console.log(
-        `[CoinGecko API] Total content collected: ${allContent.length} items`,
-      );
-      console.log(`  - Categories: ${categories.length}`);
-      console.log(`  - Trending: ${trending.length}`);
-      console.log(`  - Top Coins: ${topCoins.length}`);
-      console.log(`  - Global: ${global.length}`);
-
       return allContent;
     } catch (error: unknown) {
-      console.error(
-        "[CoinGecko API] Error fetching all data:",
-        error instanceof Error ? error.message : String(error),
-      );
-      return allContent; // Return whatever we managed to fetch
+      return allContent;
     }
   }
 

@@ -21,30 +21,12 @@ export class RagService implements OnModuleInit {
     private vectorService: VectorService,
   ) {}
 
-  // ============================================================================
   // Lifecycle Methods
-  // ============================================================================
 
   async onModuleInit(): Promise<void> {
-    // Initialize Pinecone index only (no auto-seeding)
     await this.vectorService.initializeIndex();
-
-    // Check stats
-    const stats: IndexStats | null = await this.vectorService.getIndexStats();
-    if (stats && stats.totalVectorCount > 0) {
-      console.log(
-        `Pinecone index ready with ${stats.totalVectorCount} vectors`,
-      );
-    } else {
-      console.log(
-        `Pinecone index ready (empty). Run 'npm run seed:rag' to add data.`,
-      );
-    }
   }
 
-  // ============================================================================
-  // Public API Methods - Search
-  // ============================================================================
 
   /**
    * Search for similar documents in the knowledge base using semantic search
@@ -60,26 +42,15 @@ export class RagService implements OnModuleInit {
     threshold: number = 0.5,
   ): Promise<SearchResult[]> {
     try {
-      this.logger.debug(
-        `Searching for similar documents with query: "${query.substring(0, 50)}...", limit: ${limit}, threshold: ${threshold}`,
-      );
-
-      // Create embedding for the query
       const queryEmbedding = await this.embeddingService.createEmbedding(query);
 
-      // Search for similar documents in Pinecone
       const results = await this.vectorService.searchSimilar(
         queryEmbedding,
         limit,
       );
 
-      // Filter by threshold (Pinecone uses cosine similarity, values 0-1)
       const filteredResults = results.filter(
         (result) => result.score >= threshold,
-      );
-
-      this.logger.debug(
-        `Found ${filteredResults.length} documents matching threshold ${threshold}`,
       );
 
       return filteredResults;
@@ -140,14 +111,10 @@ Content: ${result.content}
 
       return context;
     } catch (error: unknown) {
-      console.error("Error getting relevant context:", error);
       return "Error retrieving context from knowledge base.";
     }
   }
 
-  // ============================================================================
-  // Public API Methods - Document Management
-  // ============================================================================
 
   /**
    * Add a single document to the knowledge base
@@ -156,10 +123,7 @@ Content: ${result.content}
    */
   async addDocument(content: ScrapedContent): Promise<void> {
     try {
-      this.logger.debug(`Adding single document: ${content.title}`);
-      // Reuse the logic from addMultipleDocuments
       await this.addMultipleDocuments([content]);
-      this.logger.debug(`Successfully added document: ${content.title}`);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -224,13 +188,7 @@ Content: ${result.content}
       for (let i = 0; i < uniqueContents.length; i++) {
         const content = uniqueContents[i];
         try {
-          this.logger.debug(
-            `[${i + 1}/${uniqueContents.length}] Creating embeddings for: ${content.title.substring(0, 50)}...`,
-          );
-
-          // Split content into chunks
           const chunks = chunkContent(content.content, 1000);
-          this.logger.debug(`  → Split into ${chunks.length} chunks`);
 
           for (let j = 0; j < chunks.length; j++) {
             const chunk = chunks[j];
@@ -264,7 +222,6 @@ Content: ${result.content}
                   ? embeddingError.message
                   : String(embeddingError);
 
-              // Check if it's a rate limit error
               if (
                 embeddingError instanceof HttpException &&
                 embeddingError.getStatus() === HttpStatus.TOO_MANY_REQUESTS
@@ -294,7 +251,6 @@ Content: ${result.content}
                       publishedAt: content.publishedAt || new Date(),
                     },
                   });
-                  this.logger.debug(`  ✓ Retry successful for chunk ${j + 1}`);
                 } catch (retryError: unknown) {
                   const retryErrorMessage =
                     retryError instanceof Error
@@ -314,10 +270,6 @@ Content: ${result.content}
               }
             }
           }
-
-          this.logger.debug(
-            `  ✓ Created ${chunks.length} embeddings for "${content.title}"`,
-          );
         } catch (error: unknown) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
@@ -382,9 +334,6 @@ Content: ${result.content}
       if (failedDocuments.length > 0) {
         this.logger.warn(
           `Completed with ${failedDocuments.length} failed documents out of ${uniqueContents.length} total`,
-        );
-        this.logger.debug(
-          `Failed documents: ${JSON.stringify(failedDocuments.map((d) => d.title))}`,
         );
       } else {
         this.logger.log(
@@ -471,7 +420,6 @@ Content: ${result.content}
             );
             totalDeleted += deletedCount;
 
-            // Add new documents
             await this.addMultipleDocuments(items);
             totalAdded += items.length;
 
@@ -510,7 +458,6 @@ Content: ${result.content}
           error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : undefined;
 
-        // Check if this is a transient error that should be retried
         const isTransientError = this.isTransientError(error);
 
         if (attempt < maxRetries && isTransientError) {
@@ -538,9 +485,6 @@ Content: ${result.content}
     }
   }
 
-  // ============================================================================
-  // Private Helper Methods
-  // ============================================================================
 
   /**
    * Generate a stable document ID based on URL and chunk index

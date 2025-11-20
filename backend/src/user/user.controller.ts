@@ -32,7 +32,6 @@ export class UserController {
     return user;
   }
 
-  // ============ User Endpoints ============
 
   @Get()
   async getUser(@AuthToken() token: string) {

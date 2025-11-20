@@ -19,6 +19,42 @@
   /* Border colors */
   --border-primary: rgba(43, 47, 54, 0.8);
   --border-subtle: rgba(43, 47, 54, 0.3);
+
+  /* shadcn/ui theme variables */
+  --radius: 0.5rem;
+  
+  /* shadcn background */
+  --shadcn-background: 222.2 84% 4.9%;
+  --shadcn-foreground: 210 40% 98%;
+  
+  /* shadcn card */
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  
+  /* shadcn primary - maps to primary-blue */
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  
+  /* shadcn destructive - maps to danger-red */
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  
+  /* shadcn muted */
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  
+  /* shadcn accent */
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  
+  /* shadcn border */
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+  
+  /* shadcn popover */
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
 }
 
 @theme inline {
@@ -268,4 +304,35 @@ body {
 
 .animate-leave {
   animation: leave 0.2s ease-in forwards;
+}
+
+/* Sonner Toast Custom Colors */
+[data-sonner-toast][data-type="success"] {
+  background-color: rgb(5 46 22) !important;
+  color: rgb(240 253 244) !important;
+  border-color: rgb(22 101 52) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background-color: rgb(69 10 10) !important;
+  color: rgb(254 242 242) !important;
+  border-color: rgb(153 27 27) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  background-color: rgb(66 32 6) !important;
+  color: rgb(254 252 232) !important;
+  border-color: rgb(146 64 14) !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  background-color: rgb(12 10 9) !important;
+  color: rgb(239 246 255) !important;
+  border-color: rgb(30 64 175) !important;
+}
+
+[data-sonner-toast][data-type="loading"] {
+  background-color: rgb(31 41 55) !important;
+  color: rgb(249 250 251) !important;
+  border-color: rgb(75 85 99) !important;
 }

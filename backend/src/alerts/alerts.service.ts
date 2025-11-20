@@ -13,9 +13,6 @@ export class AlertsService {
     private alertModel: Model<PriceAlert>,
   ) {}
 
-  // ============================================================================
-  // Public API Methods - Alert Management
-  // ============================================================================
 
   /**
    * Create a new price alert for a user
@@ -74,12 +71,10 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(`Fetching alerts for user: ${userId}`);
       const alerts = await this.alertModel
         .find({ userId })
         .sort({ createdAt: -1 })
         .exec();
-      this.logger.debug(`Found ${alerts.length} alerts for user ${userId}`);
       return alerts;
     } catch (error) {
       const errorMessage =
@@ -99,18 +94,14 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(`Fetching triggered alerts for user: ${userId}`);
       const alerts = await this.alertModel
         .find({
           userId,
           isActive: false,
         })
         .sort({ triggeredAt: -1 })
-        .limit(50) // Limit to last 50 triggered alerts
+        .limit(50)
         .exec();
-      this.logger.debug(
-        `Found ${alerts.length} triggered alerts for user ${userId}`,
-      );
       return alerts;
     } catch (error) {
       const errorMessage =
@@ -135,7 +126,6 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(`Deleting alert ${alertId} for user ${userId}`);
       const result = await this.alertModel
         .deleteOne({
           _id: alertId,
@@ -179,7 +169,6 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(`Toggling alert ${alertId} for user ${userId}`);
       const alert = await this.alertModel
         .findOne({ _id: alertId, userId })
         .exec();
@@ -228,7 +217,6 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(`Updating alert ${alertId} for user ${userId}`);
       const alert = await this.alertModel
         .findOne({ _id: alertId, userId })
         .exec();
@@ -264,9 +252,6 @@ export class AlertsService {
     }
   }
 
-  // ============================================================================
-  // Public API Methods - Scheduler Operations
-  // ============================================================================
 
   /**
    * Get all active price alerts across all users
@@ -277,7 +262,6 @@ export class AlertsService {
   async getAllActiveAlerts(): Promise<PriceAlert[]> {
     try {
       const alerts = await this.alertModel.find({ isActive: true }).exec();
-      this.logger.debug(`Found ${alerts.length} active alerts`);
       return alerts;
     } catch (error) {
       const errorMessage =
@@ -313,9 +297,6 @@ export class AlertsService {
     }
 
     try {
-      this.logger.debug(
-        `Marking alert ${alertId} as triggered at price ${triggeredPrice}`,
-      );
       const result = await this.alertModel
         .updateOne(
           { _id: alertId },
