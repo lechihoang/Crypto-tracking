@@ -25,10 +25,31 @@ function AuthCallbackContent() {
           }, 3000);
         } else if (result.user) {
           setStatus('success');
-          // Redirect to dashboard after 1 second
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 1000);
+          
+          // Wait a bit for cookies to be set, then verify authentication
+          setTimeout(async () => {
+            try {
+              // Verify the user is actually authenticated by checking /auth/me
+              const profileResult = await authApi.getProfile();
+              if (profileResult.user && !profileResult.error) {
+                // Authentication confirmed, redirect to dashboard
+                router.push('/dashboard');
+              } else {
+                // Cookie not working, show error
+                setStatus('error');
+                setErrorMessage('Authentication failed - please try again');
+                setTimeout(() => {
+                  router.push('/auth/login');
+                }, 3000);
+              }
+            } catch {
+              setStatus('error');
+              setErrorMessage('Authentication verification failed');
+              setTimeout(() => {
+                router.push('/auth/login');
+              }, 3000);
+            }
+          }, 500);
         } else {
           setStatus('error');
           setErrorMessage('Authentication failed - invalid response');

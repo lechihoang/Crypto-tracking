@@ -26,10 +26,7 @@ export default function Header() {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 group">
-              <div className="p-2 bg-primary-500 rounded-lg transition-all duration-300">
-                <BarChart3 className="h-6 w-6 text-white" />
-              </div>
+            <Link href="/" className="flex items-center hover:opacity-90 transition-all duration-300 group">
               <h1 className="text-2xl font-bold text-white">Crypto Tracker</h1>
             </Link>
           </div>
@@ -80,32 +77,17 @@ export default function Header() {
 
                 {/* User Menu */}
                 <div className="relative">
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <button
-                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                        className="flex items-center gap-2 p-2 rounded-sm hover:bg-dark-700 transition-all duration-200"
-                      >
-                        <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-sm font-medium text-white">
-                          {user.name || user.email?.split('@')[0]}
-                        </span>
-                      </button>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-64">
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-semibold">{user.name || 'User'}</h4>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">
-                            Click to access your account settings and preferences
-                          </p>
-                        </div>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 p-2 rounded-sm hover:bg-dark-700 transition-all duration-200"
+                  >
+                    <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      {user.name || user.email?.split('@')[0]}
+                    </span>
+                  </button>
 
                   {isUserMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-dark-800 rounded-lg border border-dark-600 backdrop-blur-md py-2 z-50">

@@ -216,7 +216,7 @@ export default function NotificationDropdown() {
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{unviewedCount > 0 ? `${unviewedCount} new notification${unviewedCount > 1 ? 's' : ''}` : 'Notifications'}</p>
+            <p>Thông báo</p>
           </TooltipContent>
         </Tooltip>
 

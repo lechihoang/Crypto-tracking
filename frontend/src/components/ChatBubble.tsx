@@ -51,7 +51,7 @@ export default function ChatBubble() {
           isOpen ? 'bg-gray-600 hover:bg-gray-700' : 'bg-primary-500 hover:bg-primary-600'
         } text-white rounded-full shadow-lg transition-all duration-300 flex items-center justify-center group`}
         aria-label={isOpen ? "Close crypto assistant chat" : "Open crypto assistant chat"}
-        data-tooltip="Crypto chatbot"
+        data-tooltip="Trò chuyện với chatbot"
       >
         {isOpen ? (
           <X size={24} className="group-hover:scale-110 transition-transform" />

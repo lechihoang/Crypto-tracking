@@ -107,13 +107,11 @@ export class AuthController {
 
   // Helper method to set auth cookies
   private setAuthCookies(res: Response, accessToken: string, idToken?: string) {
-    const isProduction = process.env.NODE_ENV === "production";
-
     // Set access token cookie
     res.cookie("auth_token", accessToken, {
       httpOnly: true,
-      secure: isProduction, // true in production (HTTPS)
-      sameSite: isProduction ? "none" : "lax", // "none" for cross-domain in production
+      secure: true, // Always use HTTPS
+      sameSite: "none", // Allow cross-domain
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: "/",
     });
@@ -122,8 +120,8 @@ export class AuthController {
     if (idToken) {
       res.cookie("id_token", idToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax", // "none" for cross-domain in production
+        secure: true,
+        sameSite: "none",
         maxAge: 24 * 60 * 60 * 1000,
         path: "/",
       });
@@ -132,8 +130,16 @@ export class AuthController {
 
   // Helper method to clear auth cookies
   private clearAuthCookies(res: Response) {
-    res.clearCookie("auth_token", { path: "/" });
-    res.clearCookie("id_token", { path: "/" });
+    // Must match the same options used when setting cookies
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none" as const,
+      path: "/",
+    };
+    
+    res.clearCookie("auth_token", cookieOptions);
+    res.clearCookie("id_token", cookieOptions);
   }
 
   // Social Login Endpoints
