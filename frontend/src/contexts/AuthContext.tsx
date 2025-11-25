@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi } from '@/lib/api';
 import { User, AuthContextType } from '@/types';
+import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -58,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.signOut();
       setUser(null);
-      // Use window.location for clean logout
       if (typeof window !== 'undefined') {
         window.location.href = '/';
       }

@@ -193,6 +193,9 @@ export class PortfolioService {
         return { totalValue: 0, holdings: [] };
       }
 
+      // Populate coin info (name, symbol, image) from CoinGecko API
+      const populatedHoldings = await this.populateCoinInfo(holdings);
+
       const coinIds = holdings.map((h) => h.coinId);
       let prices: Record<string, { usd: number }>;
       try {
@@ -212,7 +215,7 @@ export class PortfolioService {
       }
 
       let totalValue = 0;
-      const enrichedHoldings = holdings.map((holding) => {
+      const enrichedHoldings = populatedHoldings.map((holding) => {
         const priceData = prices[holding.coinId];
         const currentPrice = priceData?.usd || 0;
         const currentValue = holding.quantity * currentPrice;
@@ -230,7 +233,7 @@ export class PortfolioService {
         }
 
         return {
-          holding, // Already has coinName, coinSymbol, coinImage populated
+          holding, // Now has coinName, coinSymbol, coinImage populated
           currentPrice,
           currentValue,
           profitLoss,

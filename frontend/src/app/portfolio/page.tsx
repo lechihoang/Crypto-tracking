@@ -520,7 +520,7 @@ export default function PortfolioPage() {
                               {holding.coinName}
                             </div>
                             <div className="text-sm text-gray-400">
-                              {holding.coinSymbol.toUpperCase()}
+                              {holding.coinSymbol?.toUpperCase() || 'N/A'}
                             </div>
                           </div>
                         </td>
